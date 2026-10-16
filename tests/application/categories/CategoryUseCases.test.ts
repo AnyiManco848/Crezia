@@ -94,13 +94,11 @@ describe('category use cases', () => {
   });
 
   describe('DeleteCategoryUseCase', () => {
-    const now = new Date('2026-10-15T12:00:00Z');
+    it('soft deletes an own category filling deletedAt, deletedBy and updatedBy', async () => {
+      await new DeleteCategoryUseCase(repo).execute(mine.id, ME);
 
-    it('soft deletes an own category filling deletedAt and deletedBy', async () => {
-      await new DeleteCategoryUseCase(repo, () => now).execute(mine.id, ME);
-
-      expect(mine.deletedAt).toEqual(now);
-      expect(mine.deletedBy).toBe(ME);
+      expect(mine.deletedAt).toBeInstanceOf(Date);
+      expect(mine).toMatchObject({ deletedBy: ME, updatedBy: ME });
       expect(repo.rows).toContain(mine);
       expect(await repo.findById(mine.id)).toBeNull();
     });

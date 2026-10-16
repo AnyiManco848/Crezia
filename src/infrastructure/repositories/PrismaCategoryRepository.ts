@@ -6,6 +6,7 @@ import type {
   UpdateCategoryData,
 } from '../../domain/repositories/CategoryRepository';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { softDeleteRow } from '../prisma/softDelete';
 
 const categorySelect = {
   id: true,
@@ -48,11 +49,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
     });
   }
 
-  async softDelete(id: string, data: SoftDeleteData): Promise<void> {
-    await this.prisma.category.update({
-      where: { id, deletedAt: null },
-      data: { ...data, updatedBy: data.deletedBy },
-      select: { id: true },
-    });
+  softDelete(id: string, { deletedBy }: SoftDeleteData): Promise<void> {
+    return softDeleteRow(this.prisma, 'categories', id, deletedBy);
   }
 }
