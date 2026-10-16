@@ -57,8 +57,9 @@ export class InMemoryCategoryRepository implements CategoryRepository {
     return toPublic(row);
   }
 
-  async softDelete(id: string, data: SoftDeleteData): Promise<void> {
-    Object.assign(this.active(id)!, data);
+  // new Date() stands in for the database now() used by the real repository.
+  async softDelete(id: string, { deletedBy }: SoftDeleteData): Promise<void> {
+    Object.assign(this.active(id)!, { deletedAt: new Date(), deletedBy, updatedBy: deletedBy });
   }
 
   private active(id: string): StoredCategory | undefined {

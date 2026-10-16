@@ -15,8 +15,8 @@ export interface UpdateCategoryData {
   updatedBy: string;
 }
 
+// deleted_at is not sent: the repository takes it from the database clock.
 export interface SoftDeleteData {
-  deletedAt: Date;
   deletedBy: string;
 }
 
