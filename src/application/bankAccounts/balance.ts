@@ -1,30 +1,13 @@
 import type { BankAccount, BankAccountWithBalance } from '../../domain/entities/BankAccount';
 import type { MovementType } from '../../domain/entities/Movement';
 import type { MovementTotal } from '../../domain/repositories/BankAccountRepository';
+import { fromCents, toCents } from '../money';
 
 export interface BalanceEntry {
   type: MovementType;
   // Decimal string with up to two places, as NUMERIC(14,2) arrives from the database.
   amount: string;
   deletedAt?: Date | null;
-}
-
-const AMOUNT = /^(-)?(\d+)(?:\.(\d{1,2}))?$/;
-
-// Money is added in integer cents to avoid floating point errors (0.1 + 0.2).
-// NUMERIC(14,2) fits well inside Number.MAX_SAFE_INTEGER once expressed in cents.
-function toCents(amount: string): number {
-  const match = AMOUNT.exec(amount.trim());
-  if (!match) throw new Error(`Invalid amount: ${amount}`);
-  const [, sign, whole, fraction = ''] = match;
-  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-  return sign ? -cents : cents;
-}
-
-function fromCents(cents: number): string {
-  const sign = cents < 0 ? '-' : '';
-  const abs = Math.abs(cents);
-  return `${sign}${Math.trunc(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
 }
 
 // Balance = sum of Income - sum of Expense, ignoring soft-deleted entries.

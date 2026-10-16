@@ -2,21 +2,9 @@ import { z } from 'zod';
 import { DEFAULT_LIMIT, DEFAULT_PAGE, MAX_LIMIT } from '../../application/movements/ListMovementsUseCase';
 import { INVALID_AMOUNT_MESSAGE } from '../../application/movements/movementAccess';
 import { MOVEMENT_TYPES, PAYMENT_METHODS } from '../../domain/entities/Movement';
+import { positiveAmountSchema } from './commonSchemas';
 
-// NUMERIC(14,2): up to 12 integer digits and 2 decimals.
-const AMOUNT_FORMAT = /^\d{1,12}(?:\.\d{1,2})?$/;
-
-// Accepts 85000 or "85000.50" and hands the use case a decimal string, so no float reaches the database.
-const amount = z
-  .union([z.number(), z.string()], { error: 'El monto es obligatorio y debe ser un número' })
-  .transform((value) => String(value).trim())
-  .pipe(
-    z
-      .string()
-      .regex(/^-?\d+(?:\.\d+)?$/, { error: 'El monto debe ser un número', abort: true })
-      .refine((value) => Number(value) > 0, { error: INVALID_AMOUNT_MESSAGE, abort: true })
-      .regex(AMOUNT_FORMAT, { error: 'El monto admite hasta 12 dígitos enteros y 2 decimales' }),
-  );
+const amount = positiveAmountSchema('El monto', INVALID_AMOUNT_MESSAGE);
 
 const type = z.enum(MOVEMENT_TYPES, { error: `El tipo debe ser uno de: ${MOVEMENT_TYPES.join(', ')}` });
 

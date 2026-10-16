@@ -4,11 +4,13 @@ import type { Container } from './infrastructure/container';
 import { AuthController } from './presentation/controllers/AuthController';
 import { BankAccountController } from './presentation/controllers/BankAccountController';
 import { CategoryController } from './presentation/controllers/CategoryController';
+import { GoalController } from './presentation/controllers/GoalController';
 import { MovementController } from './presentation/controllers/MovementController';
 import { errorHandler, notFound } from './presentation/middlewares/errorHandler';
 import { authRoutes } from './presentation/routes/authRoutes';
 import { bankAccountRoutes } from './presentation/routes/bankAccountRoutes';
 import { categoryRoutes } from './presentation/routes/categoryRoutes';
+import { goalRoutes } from './presentation/routes/goalRoutes';
 import { movementRoutes } from './presentation/routes/movementRoutes';
 
 export function createApp(container: Container) {
@@ -33,6 +35,7 @@ export function createApp(container: Container) {
     '/api/movements',
     movementRoutes(new MovementController(container.movementUseCases), container.tokenService),
   );
+  app.use('/api/goals', goalRoutes(new GoalController(container.goalUseCases), container.tokenService));
 
   app.use(notFound);
   app.use(errorHandler);
