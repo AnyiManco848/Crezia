@@ -1,0 +1,555 @@
+// Crezia — Prisma schema translated from docs/db/crezia_schema_v2.sql
+//
+// Differences from the DDL (intentional):
+//   - users.id no longer references auth.users; it generates its own UUID.
+//   - users.password_hash added (own login with bcrypt + JWT).
+//   - No RLS policies, no is_admin(), nothing depending on Supabase's auth schema.
+//
+// Not expressible in Prisma, added by hand in the init migration.sql:
+//   - CHECK constraints, set_updated_at() function and its triggers, pgcrypto extension.
+//
+// Every FK in the DDL has no ON DELETE / ON UPDATE clause (= NO ACTION), so all
+// relations declare onDelete/onUpdate: NoAction to override Prisma's defaults.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  moduleFormat    = "cjs"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================================================================
+// ENUMS
+// =====================================================================
+
+enum UserRole {
+  User
+  Admin
+
+  @@map("user_role")
+}
+
+enum GenderType {
+  Female
+  Male
+  Other
+
+  @@map("gender_type")
+}
+
+enum MovementType {
+  Income
+  Expense
+
+  @@map("movement_type")
+}
+
+enum PaymentMethod {
+  Cash
+  Transfer
+  CreditCard
+  DebitCard
+  Other
+
+  @@map("payment_method")
+}
+
+enum MovementSource {
+  Manual
+  EmailParsed
+
+  @@map("movement_source")
+}
+
+enum AccountType {
+  Savings
+  Checking
+  Credit
+  Other
+
+  @@map("account_type")
+}
+
+enum GoalStatus {
+  Active
+  Completed
+  Cancelled
+  Overdue
+
+  @@map("goal_status")
+}
+
+enum GoalReason {
+  Travel
+  Vehicle
+  Education
+  EmergencyFund
+  HomePurchase
+  Technology
+  DebtPayment
+  Other
+
+  @@map("goal_reason")
+}
+
+enum EmailProvider {
+  Gmail
+  Outlook
+
+  @@map("email_provider")
+}
+
+enum ParseStatus {
+  Pending
+  Parsed
+  Failed
+  Ignored
+
+  @@map("parse_status")
+}
+
+enum ContentType {
+  Article
+  Video
+  Tip
+  Infographic
+
+  @@map("content_type")
+}
+
+enum ContentStatus {
+  Draft
+  Published
+  Archived
+
+  @@map("content_status")
+}
+
+enum NotificationType {
+  AntExpenseAlert
+  GoalDeadlineReminder
+  BudgetExceeded
+  System
+
+  @@map("notification_type")
+}
+
+// =====================================================================
+// MODELS
+// =====================================================================
+
+// System catalog, no audit columns.
+model Currency {
+  code          String  @id @db.Char(3)
+  name          String  @db.VarChar(50)
+  symbol        String  @db.VarChar(5)
+  decimalPlaces Int     @default(2) @map("decimal_places") @db.SmallInt
+  isActive      Boolean @default(true) @map("is_active")
+
+  users        User[]
+  bankAccounts BankAccount[]
+  movements    Movement[]
+  goals        Goal[]
+
+  @@map("currency")
+}
+
+model User {
+  id                    String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId            String      @map("document_id") @db.VarChar(20)
+  name                  String      @db.VarChar(150)
+  address               String?     @db.VarChar(255)
+  email                 String      @db.VarChar(255)
+  passwordHash          String      @map("password_hash") @db.Text
+  phone                 String?     @db.VarChar(20)
+  birthDate             DateTime    @map("birth_date") @db.Date
+  gender                GenderType?
+  genderOther           String?     @map("gender_other") @db.VarChar(100)
+  role                  UserRole    @default(User)
+  preferredCurrencyCode String      @map("preferred_currency_code") @db.Char(3)
+  twoFactorEnabled      Boolean     @default(false) @map("two_factor_enabled")
+  createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy             String?     @map("created_by") @db.Uuid
+  updatedBy             String?     @map("updated_by") @db.Uuid
+  deletedAt             DateTime?   @map("deleted_at") @db.Timestamptz(6)
+  deletedBy             String?     @map("deleted_by") @db.Uuid
+
+  preferredCurrency Currency @relation(fields: [preferredCurrencyCode], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser     User?    @relation("UserCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser     User?    @relation("UserUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser     User?    @relation("UserDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Owned resources
+  categories              Category[]               @relation("CategoryOwner")
+  bankAccounts            BankAccount[]            @relation("BankAccountOwner")
+  movements               Movement[]               @relation("MovementOwner")
+  goals                   Goal[]                   @relation("GoalOwner")
+  emailConnections        EmailConnection[]        @relation("EmailConnectionOwner")
+  financialProfile        FinancialProfile?
+  userContentInteractions UserContentInteraction[] @relation("UserContentInteractionOwner")
+  notifications           Notification[]           @relation("NotificationOwner")
+
+  // Audit back-relations (created_by / updated_by / deleted_by)
+  createdUsers                   User[]                   @relation("UserCreatedBy")
+  updatedUsers                   User[]                   @relation("UserUpdatedBy")
+  deletedUsers                   User[]                   @relation("UserDeletedBy")
+  createdCategories              Category[]               @relation("CategoryCreatedBy")
+  updatedCategories              Category[]               @relation("CategoryUpdatedBy")
+  deletedCategories              Category[]               @relation("CategoryDeletedBy")
+  createdBankAccounts            BankAccount[]            @relation("BankAccountCreatedBy")
+  updatedBankAccounts            BankAccount[]            @relation("BankAccountUpdatedBy")
+  deletedBankAccounts            BankAccount[]            @relation("BankAccountDeletedBy")
+  createdMovements               Movement[]               @relation("MovementCreatedBy")
+  updatedMovements               Movement[]               @relation("MovementUpdatedBy")
+  deletedMovements               Movement[]               @relation("MovementDeletedBy")
+  createdGoals                   Goal[]                   @relation("GoalCreatedBy")
+  updatedGoals                   Goal[]                   @relation("GoalUpdatedBy")
+  deletedGoals                   Goal[]                   @relation("GoalDeletedBy")
+  createdEmailConnections        EmailConnection[]        @relation("EmailConnectionCreatedBy")
+  updatedEmailConnections        EmailConnection[]        @relation("EmailConnectionUpdatedBy")
+  deletedEmailConnections        EmailConnection[]        @relation("EmailConnectionDeletedBy")
+  createdContentCategories       ContentCategory[]        @relation("ContentCategoryCreatedBy")
+  updatedContentCategories       ContentCategory[]        @relation("ContentCategoryUpdatedBy")
+  deletedContentCategories       ContentCategory[]        @relation("ContentCategoryDeletedBy")
+  createdEducationalContent      EducationalContent[]     @relation("EducationalContentCreatedBy")
+  updatedEducationalContent      EducationalContent[]     @relation("EducationalContentUpdatedBy")
+  deletedEducationalContent      EducationalContent[]     @relation("EducationalContentDeletedBy")
+  createdUserContentInteractions UserContentInteraction[] @relation("UserContentInteractionCreatedBy")
+  updatedUserContentInteractions UserContentInteraction[] @relation("UserContentInteractionUpdatedBy")
+  deletedUserContentInteractions UserContentInteraction[] @relation("UserContentInteractionDeletedBy")
+  createdNotifications           Notification[]           @relation("NotificationCreatedBy")
+  updatedNotifications           Notification[]           @relation("NotificationUpdatedBy")
+  deletedNotifications           Notification[]           @relation("NotificationDeletedBy")
+
+  @@unique([documentId], map: "uq_users_document_id", where: raw("deleted_at IS NULL"))
+  @@unique([email], map: "uq_users_email", where: raw("deleted_at IS NULL"))
+  @@index([preferredCurrencyCode], map: "idx_users_currency")
+  @@map("users")
+}
+
+// Shared between income and expense. user_id NULL = system category.
+model Category {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String?   @map("user_id") @db.Uuid
+  name        String    @db.VarChar(100)
+  description String?   @db.VarChar(255)
+  isDefault   Boolean   @default(false) @map("is_default")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String?   @map("created_by") @db.Uuid
+  updatedBy   String?   @map("updated_by") @db.Uuid
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  deletedBy   String?   @map("deleted_by") @db.Uuid
+
+  user          User? @relation("CategoryOwner", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser User? @relation("CategoryCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser User? @relation("CategoryUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser User? @relation("CategoryDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  movements     Movement[]
+  goals         Goal[]
+  notifications Notification[]
+
+  @@index([userId], map: "idx_categories_user")
+  @@map("categories")
+}
+
+// No stored balance: it is computed from movements.
+model BankAccount {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String      @map("user_id") @db.Uuid
+  bankName     String      @map("bank_name") @db.VarChar(100)
+  accountAlias String?     @map("account_alias") @db.VarChar(100)
+  accountType  AccountType @map("account_type")
+  currencyCode String      @map("currency_code") @db.Char(3)
+  lastSyncedAt DateTime?   @map("last_synced_at") @db.Timestamptz(6)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy    String?     @map("created_by") @db.Uuid
+  updatedBy    String?     @map("updated_by") @db.Uuid
+  deletedAt    DateTime?   @map("deleted_at") @db.Timestamptz(6)
+  deletedBy    String?     @map("deleted_by") @db.Uuid
+
+  user          User     @relation("BankAccountOwner", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currency      Currency @relation(fields: [currencyCode], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser User?    @relation("BankAccountCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser User?    @relation("BankAccountUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser User?    @relation("BankAccountDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  movements Movement[]
+
+  @@index([userId], map: "idx_bank_accounts_user")
+  @@index([currencyCode], map: "idx_bank_accounts_currency")
+  @@map("bank_accounts")
+}
+
+// Single table; `type` distinguishes income from expense. amount is always > 0.
+model Movement {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  bankAccountId String?        @map("bank_account_id") @db.Uuid
+  categoryId    String         @map("category_id") @db.Uuid
+  type          MovementType
+  amount        Decimal        @db.Decimal(14, 2)
+  currencyCode  String         @map("currency_code") @db.Char(3)
+  date          DateTime       @db.Date
+  paymentMethod PaymentMethod  @map("payment_method")
+  source        MovementSource
+  description   String?        @db.VarChar(255)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy     String?        @map("created_by") @db.Uuid
+  updatedBy     String?        @map("updated_by") @db.Uuid
+  deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz(6)
+  deletedBy     String?        @map("deleted_by") @db.Uuid
+
+  user          User         @relation("MovementOwner", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category      Category     @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currency      Currency     @relation(fields: [currencyCode], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser User?        @relation("MovementCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser User?        @relation("MovementUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser User?        @relation("MovementDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  parsedEmails  ParsedEmail[]
+  notifications Notification[]
+
+  @@index([userId], map: "idx_movements_user")
+  @@index([bankAccountId], map: "idx_movements_bank_account_active", where: raw("deleted_at IS NULL"))
+  @@index([categoryId], map: "idx_movements_category")
+  @@index([currencyCode], map: "idx_movements_currency")
+  @@index([date], map: "idx_movements_date")
+  @@map("movements")
+}
+
+// Savings goal. Progress and installments are COMPUTED, not stored.
+// Progress = SUM(movements.amount) of the goal owner's non-deleted movements with
+// type = Expense, category_id = goal.category_id and date BETWEEN start_date AND end_date.
+// Saving toward a goal is recorded as an Expense in the goal's category.
+model Goal {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
+  categoryId   String     @map("category_id") @db.Uuid
+  name         String     @db.VarChar(100)
+  reason       GoalReason
+  reasonOther  String?    @map("reason_other") @db.VarChar(255)
+  targetAmount Decimal    @map("target_amount") @db.Decimal(14, 2)
+  currencyCode String     @map("currency_code") @db.Char(3)
+  startDate    DateTime   @map("start_date") @db.Date
+  endDate      DateTime   @map("end_date") @db.Date
+  status       GoalStatus @default(Active)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy    String?    @map("created_by") @db.Uuid
+  updatedBy    String?    @map("updated_by") @db.Uuid
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  deletedBy    String?    @map("deleted_by") @db.Uuid
+
+  user          User     @relation("GoalOwner", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category      Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currency      Currency @relation(fields: [currencyCode], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser User?    @relation("GoalCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser User?    @relation("GoalUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser User?    @relation("GoalDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  notifications Notification[]
+
+  @@unique([userId, categoryId], map: "uq_goals_active_category", where: raw("(deleted_at IS NULL) AND (status = ANY (ARRAY['Active'::goal_status, 'Overdue'::goal_status]))"))
+  @@index([userId], map: "idx_goals_user")
+  @@index([categoryId], map: "idx_goals_category")
+  @@index([currencyCode], map: "idx_goals_currency")
+  @@map("goals")
+}
+
+// Read-only OAuth connection to the user's mailbox.
+model EmailConnection {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String        @map("user_id") @db.Uuid
+  provider              EmailProvider
+  emailAddress          String        @map("email_address") @db.VarChar(255)
+  accessTokenEncrypted  String        @map("access_token_encrypted") @db.Text
+  refreshTokenEncrypted String        @map("refresh_token_encrypted") @db.Text
+  scope                 String        @db.VarChar(255)
+  isActive              Boolean       @default(true) @map("is_active")
+  lastSyncedAt          DateTime?     @map("last_synced_at") @db.Timestamptz(6)
+  connectedAt           DateTime      @default(now()) @map("connected_at") @db.Timestamptz(6)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy             String?       @map("created_by") @db.Uuid
+  updatedBy             String?       @map("updated_by") @db.Uuid
+  deletedAt             DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  deletedBy             String?       @map("deleted_by") @db.Uuid
+
+  user          User  @relation("EmailConnectionOwner", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser User? @relation("EmailConnectionCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser User? @relation("EmailConnectionUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser User? @relation("EmailConnectionDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  parsedEmails ParsedEmail[]
+
+  @@unique([userId, emailAddress], map: "uq_email_connections_user_email", where: raw("deleted_at IS NULL"))
+  @@index([userId], map: "idx_email_connections_user")
+  @@map("email_connections")
+}
+
+// Immutable log used for de-duplication. No audit columns.
+model ParsedEmail {
+  id                String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  emailConnectionId String      @map("email_connection_id") @db.Uuid
+  externalMessageId String      @map("external_message_id") @db.VarChar(255)
+  senderAddress     String      @map("sender_address") @db.VarChar(255)
+  subject           String?     @db.VarChar(500)
+  receivedAt        DateTime    @map("received_at") @db.Timestamptz(6)
+  parseStatus       ParseStatus @default(Pending) @map("parse_status")
+  movementId        String?     @map("movement_id") @db.Uuid
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  emailConnection EmailConnection @relation(fields: [emailConnectionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movement        Movement?       @relation(fields: [movementId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([emailConnectionId, externalMessageId], map: "uq_parsed_emails_connection_message")
+  @@index([emailConnectionId], map: "idx_parsed_emails_connection")
+  @@index([movementId], map: "idx_parsed_emails_movement")
+  @@map("parsed_emails")
+}
+
+// One row per user, overwritten. No audit columns.
+model FinancialProfile {
+  id                        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                    String         @unique @map("user_id") @db.Uuid
+  monthlyIncome             Decimal?       @map("monthly_income") @db.Decimal(14, 2)
+  fixedExpenses             Decimal?       @map("fixed_expenses") @db.Decimal(14, 2)
+  antExpensePercentage      Decimal?       @map("ant_expense_percentage") @db.Decimal(5, 2)
+  makesUnnecessaryPurchases Boolean?       @map("makes_unnecessary_purchases")
+  hasDebts                  Boolean?       @map("has_debts")
+  debtAmount                Decimal?       @map("debt_amount") @db.Decimal(14, 2)
+  appUsefulnessRating       Int?           @map("app_usefulness_rating") @db.SmallInt
+  currentlySaves            Boolean?       @map("currently_saves")
+  proposedSavingsAmount     Decimal?       @map("proposed_savings_amount") @db.Decimal(14, 2)
+  hasFinancialKnowledge     Boolean?       @map("has_financial_knowledge")
+  canDetectAntExpenses      Boolean?       @map("can_detect_ant_expenses")
+  primaryPaymentMethod      PaymentMethod? @map("primary_payment_method")
+  additionalAnswers         Json?          @default("{}") @map("additional_answers") @db.JsonB
+  createdAt                 DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("financial_profile")
+}
+
+// Topics for educational content.
+model ContentCategory {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @db.VarChar(100)
+  description String?   @db.VarChar(255)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String?   @map("created_by") @db.Uuid
+  updatedBy   String?   @map("updated_by") @db.Uuid
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  deletedBy   String?   @map("deleted_by") @db.Uuid
+
+  createdByUser User? @relation("ContentCategoryCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser User? @relation("ContentCategoryUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser User? @relation("ContentCategoryDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  educationalContent EducationalContent[]
+
+  @@map("content_categories")
+}
+
+model EducationalContent {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contentCategoryId String        @map("content_category_id") @db.Uuid
+  title             String        @db.VarChar(150)
+  type              ContentType
+  body              String?       @db.Text
+  mediaUrl          String?       @map("media_url") @db.VarChar(500)
+  durationMinutes   Int?          @map("duration_minutes") @db.SmallInt
+  status            ContentStatus @default(Draft)
+  publishedAt       DateTime?     @map("published_at") @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy         String?       @map("created_by") @db.Uuid
+  updatedBy         String?       @map("updated_by") @db.Uuid
+  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  deletedBy         String?       @map("deleted_by") @db.Uuid
+
+  contentCategory ContentCategory @relation(fields: [contentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser   User?           @relation("EducationalContentCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser   User?           @relation("EducationalContentUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser   User?           @relation("EducationalContentDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  interactions UserContentInteraction[]
+
+  @@index([contentCategoryId], map: "idx_educational_content_category")
+  @@map("educational_content")
+}
+
+// Favorites, read, rejected.
+model UserContentInteraction {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  contentId  String    @map("content_id") @db.Uuid
+  isFavorite Boolean   @default(false) @map("is_favorite")
+  isRead     Boolean   @default(false) @map("is_read")
+  readAt     DateTime? @map("read_at") @db.Timestamptz(6)
+  isRejected Boolean   @default(false) @map("is_rejected")
+  rejectedAt DateTime? @map("rejected_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy  String?   @map("created_by") @db.Uuid
+  updatedBy  String?   @map("updated_by") @db.Uuid
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+  deletedBy  String?   @map("deleted_by") @db.Uuid
+
+  user          User               @relation("UserContentInteractionOwner", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  content       EducationalContent @relation(fields: [contentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser User?              @relation("UserContentInteractionCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser User?              @relation("UserContentInteractionUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser User?              @relation("UserContentInteractionDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([userId, contentId], map: "uq_user_content_interactions", where: raw("deleted_at IS NULL"))
+  @@index([userId], map: "idx_user_content_interactions_user")
+  @@index([contentId], map: "idx_user_content_interactions_content")
+  @@map("user_content_interactions")
+}
+
+// The specific FK that must be set depends on `type` (see chk_notification_entity).
+model Notification {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  type       NotificationType
+  title      String           @db.VarChar(150)
+  message    String           @db.Text
+  isRead     Boolean          @default(false) @map("is_read")
+  goalId     String?          @map("goal_id") @db.Uuid
+  movementId String?          @map("movement_id") @db.Uuid
+  categoryId String?          @map("category_id") @db.Uuid
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy  String?          @map("created_by") @db.Uuid
+  updatedBy  String?          @map("updated_by") @db.Uuid
+  deletedAt  DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  deletedBy  String?          @map("deleted_by") @db.Uuid
+
+  user          User      @relation("NotificationOwner", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  goal          Goal?     @relation(fields: [goalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movement      Movement? @relation(fields: [movementId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category      Category? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser User?     @relation("NotificationCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser User?     @relation("NotificationUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deletedByUser User?     @relation("NotificationDeletedBy", fields: [deletedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId], map: "idx_notifications_user")
+  @@index([goalId], map: "idx_notifications_goal")
+  @@index([movementId], map: "idx_notifications_movement")
+  @@index([categoryId], map: "idx_notifications_category")
+  @@map("notifications")
+}

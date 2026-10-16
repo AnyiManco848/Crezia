@@ -1,0 +1,100 @@
+import type { Movement } from '../../domain/entities/Movement';
+import type {
+  CreateMovementData,
+  MovementFilters,
+  MovementPage,
+  MovementRepository,
+  Pagination,
+  SoftDeleteData,
+  UpdateMovementData,
+} from '../../domain/repositories/MovementRepository';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { softDeleteRow } from '../prisma/softDelete';
+
+const movementSelect = {
+  id: true,
+  userId: true,
+  bankAccountId: true,
+  categoryId: true,
+  type: true,
+  amount: true,
+  currencyCode: true,
+  date: true,
+  paymentMethod: true,
+  source: true,
+  description: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+type MovementRow = Prisma.MovementGetPayload<{ select: typeof movementSelect }>;
+
+// DATE columns travel as UTC midnight, so the calendar day is the ISO date part.
+function toDbDate(date: string): Date {
+  return new Date(`${date}T00:00:00.000Z`);
+}
+
+function toMovement({ amount, date, ...row }: MovementRow): Movement {
+  return { ...row, amount: amount.toFixed(2), date: date.toISOString().slice(0, 10) };
+}
+
+export class PrismaMovementRepository implements MovementRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  // Movements of a deleted account are still listed: only the movement's own deleted_at counts.
+  async listByUser(
+    userId: string,
+    { type, categoryId, bankAccountId, from, to }: MovementFilters,
+    { skip, take }: Pagination,
+  ): Promise<MovementPage> {
+    const where: Prisma.MovementWhereInput = {
+      userId,
+      deletedAt: null,
+      type,
+      categoryId,
+      bankAccountId,
+      date: from || to ? { gte: from ? toDbDate(from) : undefined, lte: to ? toDbDate(to) : undefined } : undefined,
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.movement.findMany({
+        where,
+        // created_at and id break ties inside the same day so pages are stable.
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+        select: movementSelect,
+      }),
+      this.prisma.movement.count({ where }),
+    ]);
+    return { data: rows.map(toMovement), total };
+  }
+
+  async findById(id: string): Promise<Movement | null> {
+    const row = await this.prisma.movement.findFirst({
+      where: { id, deletedAt: null },
+      select: movementSelect,
+    });
+    return row ? toMovement(row) : null;
+  }
+
+  async create({ date, ...data }: CreateMovementData): Promise<Movement> {
+    const row = await this.prisma.movement.create({
+      data: { ...data, date: toDbDate(date) },
+      select: movementSelect,
+    });
+    return toMovement(row);
+  }
+
+  async update(id: string, { date, ...data }: UpdateMovementData): Promise<Movement> {
+    const row = await this.prisma.movement.update({
+      where: { id, deletedAt: null },
+      data: { ...data, date: date === undefined ? undefined : toDbDate(date) },
+      select: movementSelect,
+    });
+    return toMovement(row);
+  }
+
+  softDelete(id: string, { deletedBy }: SoftDeleteData): Promise<void> {
+    return softDeleteRow(this.prisma, 'movements', id, deletedBy);
+  }
+}
