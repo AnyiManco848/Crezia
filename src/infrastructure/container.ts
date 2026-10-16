@@ -1,4 +1,10 @@
 import { LoginUseCase } from '../application/auth/LoginUseCase';
+import type { BankAccountUseCases } from '../application/bankAccounts';
+import { CreateBankAccountUseCase } from '../application/bankAccounts/CreateBankAccountUseCase';
+import { DeleteBankAccountUseCase } from '../application/bankAccounts/DeleteBankAccountUseCase';
+import { GetBankAccountUseCase } from '../application/bankAccounts/GetBankAccountUseCase';
+import { ListBankAccountsUseCase } from '../application/bankAccounts/ListBankAccountsUseCase';
+import { UpdateBankAccountUseCase } from '../application/bankAccounts/UpdateBankAccountUseCase';
 import type { CategoryUseCases } from '../application/categories';
 import { CreateCategoryUseCase } from '../application/categories/CreateCategoryUseCase';
 import { DeleteCategoryUseCase } from '../application/categories/DeleteCategoryUseCase';
@@ -7,7 +13,9 @@ import { ListCategoriesUseCase } from '../application/categories/ListCategoriesU
 import { UpdateCategoryUseCase } from '../application/categories/UpdateCategoryUseCase';
 import type { TokenService } from '../application/services';
 import { createPrismaClient } from './prisma/client';
+import { PrismaBankAccountRepository } from './repositories/PrismaBankAccountRepository';
 import { PrismaCategoryRepository } from './repositories/PrismaCategoryRepository';
+import { PrismaCurrencyRepository } from './repositories/PrismaCurrencyRepository';
 import { PrismaUserRepository } from './repositories/PrismaUserRepository';
 import { BcryptPasswordHasher } from './security/BcryptPasswordHasher';
 import { JwtTokenService } from './security/JwtTokenService';
@@ -17,6 +25,7 @@ export interface Container {
   tokenService: TokenService;
   loginUseCase: LoginUseCase;
   categoryUseCases: CategoryUseCases;
+  bankAccountUseCases: BankAccountUseCases;
 }
 
 export function createContainer(): Container {
@@ -24,6 +33,8 @@ export function createContainer(): Container {
   const tokenService = JwtTokenService.fromEnv();
   const users = new PrismaUserRepository(prisma);
   const categories = new PrismaCategoryRepository(prisma);
+  const bankAccounts = new PrismaBankAccountRepository(prisma);
+  const currencies = new PrismaCurrencyRepository(prisma);
 
   return {
     tokenService,
@@ -34,6 +45,13 @@ export function createContainer(): Container {
       create: new CreateCategoryUseCase(categories),
       update: new UpdateCategoryUseCase(categories),
       delete: new DeleteCategoryUseCase(categories),
+    },
+    bankAccountUseCases: {
+      list: new ListBankAccountsUseCase(bankAccounts),
+      get: new GetBankAccountUseCase(bankAccounts),
+      create: new CreateBankAccountUseCase(bankAccounts, currencies),
+      update: new UpdateBankAccountUseCase(bankAccounts, currencies),
+      delete: new DeleteBankAccountUseCase(bankAccounts),
     },
   };
 }
