@@ -13,7 +13,7 @@ export function categoryRoutes(controller: CategoryController, tokens: TokenServ
   router.get('/', controller.list);
   router.get('/:id', validate({ params: idParamsSchema }), controller.get);
   router.post('/', validate({ body: createCategoryBodySchema }), controller.create);
-  router.put('/:id', validate({ params: idParamsSchema, body: updateCategoryBodySchema }), controller.update);
+  router.patch('/:id', validate({ params: idParamsSchema, body: updateCategoryBodySchema }), controller.update);
   router.delete('/:id', validate({ params: idParamsSchema }), controller.delete);
   return router;
 }

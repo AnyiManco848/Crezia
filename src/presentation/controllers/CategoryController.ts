@@ -25,6 +25,7 @@ export class CategoryController {
 
   delete = async (req: Request<IdParams>, res: Response) => {
     await this.useCases.delete.execute(req.params.id, req.user!.id);
-    res.status(204).end();
+    res.status(200).json({ message: "Categoría eliminada con éxito" }).end();
+    
   };
 }

@@ -25,6 +25,6 @@ export class BankAccountController {
 
   delete = async (req: Request<IdParams>, res: Response) => {
     await this.useCases.delete.execute(req.params.id, req.user!.id);
-    res.status(204).end();
+    res.status(200).json({ message: "Cuenta bancaria eliminada con éxito" });
   };
 }

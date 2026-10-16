@@ -11,11 +11,18 @@ import { DeleteCategoryUseCase } from '../application/categories/DeleteCategoryU
 import { GetCategoryUseCase } from '../application/categories/GetCategoryUseCase';
 import { ListCategoriesUseCase } from '../application/categories/ListCategoriesUseCase';
 import { UpdateCategoryUseCase } from '../application/categories/UpdateCategoryUseCase';
+import type { MovementUseCases } from '../application/movements';
+import { CreateMovementUseCase } from '../application/movements/CreateMovementUseCase';
+import { DeleteMovementUseCase } from '../application/movements/DeleteMovementUseCase';
+import { GetMovementUseCase } from '../application/movements/GetMovementUseCase';
+import { ListMovementsUseCase } from '../application/movements/ListMovementsUseCase';
+import { UpdateMovementUseCase } from '../application/movements/UpdateMovementUseCase';
 import type { TokenService } from '../application/services';
 import { createPrismaClient } from './prisma/client';
 import { PrismaBankAccountRepository } from './repositories/PrismaBankAccountRepository';
 import { PrismaCategoryRepository } from './repositories/PrismaCategoryRepository';
 import { PrismaCurrencyRepository } from './repositories/PrismaCurrencyRepository';
+import { PrismaMovementRepository } from './repositories/PrismaMovementRepository';
 import { PrismaUserRepository } from './repositories/PrismaUserRepository';
 import { BcryptPasswordHasher } from './security/BcryptPasswordHasher';
 import { JwtTokenService } from './security/JwtTokenService';
@@ -26,6 +33,7 @@ export interface Container {
   loginUseCase: LoginUseCase;
   categoryUseCases: CategoryUseCases;
   bankAccountUseCases: BankAccountUseCases;
+  movementUseCases: MovementUseCases;
 }
 
 export function createContainer(): Container {
@@ -35,6 +43,7 @@ export function createContainer(): Container {
   const categories = new PrismaCategoryRepository(prisma);
   const bankAccounts = new PrismaBankAccountRepository(prisma);
   const currencies = new PrismaCurrencyRepository(prisma);
+  const movements = new PrismaMovementRepository(prisma);
 
   return {
     tokenService,
@@ -52,6 +61,13 @@ export function createContainer(): Container {
       create: new CreateBankAccountUseCase(bankAccounts, currencies),
       update: new UpdateBankAccountUseCase(bankAccounts, currencies),
       delete: new DeleteBankAccountUseCase(bankAccounts),
+    },
+    movementUseCases: {
+      list: new ListMovementsUseCase(movements),
+      get: new GetMovementUseCase(movements),
+      create: new CreateMovementUseCase(movements, categories, bankAccounts, currencies),
+      update: new UpdateMovementUseCase(movements, categories, bankAccounts, currencies),
+      delete: new DeleteMovementUseCase(movements),
     },
   };
 }
