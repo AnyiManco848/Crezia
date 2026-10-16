@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { INVALID_AMOUNT_MESSAGE } from '../../../src/application/movements/movementAccess';
 import {
   createMovementBodySchema,
   listMovementsQuerySchema,
@@ -27,7 +28,7 @@ describe('movement schemas', () => {
   it.each([0, -1, '0.00', '-5000'])('rejects amount %s with the positive amount message', (amount) => {
     const issues = createMovementBodySchema.safeParse({ ...valid, amount }).error?.issues;
 
-    expect(issues?.map((i) => i.message)).toEqual(['El monto debe ser mayor que 0']);
+    expect(issues?.map((i) => i.message)).toEqual([INVALID_AMOUNT_MESSAGE]);
   });
 
   it.each(['abc', '10.123', 0.1 + 0.2, '1234567890123'])('rejects malformed amount %s', (amount) => {
