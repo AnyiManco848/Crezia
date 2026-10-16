@@ -9,7 +9,7 @@ import { ensureActiveCurrency, findOwnedBankAccount } from '../bankAccounts/bank
 import { findVisibleCategory } from '../categories/categoryAccess';
 
 export const MOVEMENT_NOT_FOUND_MESSAGE = 'Movimiento no encontrado';
-export const INVALID_AMOUNT_MESSAGE = 'El monto debe ser mayor que 0';
+export const INVALID_AMOUNT_MESSAGE = 'El monto debe ser mayor a 0';
 export const INVALID_CATEGORY_MESSAGE = 'La categoría no existe, fue eliminada o no te pertenece';
 export const INVALID_BANK_ACCOUNT_MESSAGE = 'La cuenta bancaria no existe, fue eliminada o no te pertenece';
 export const CURRENCY_REQUIRED_MESSAGE = 'La moneda es obligatoria cuando el movimiento no tiene cuenta bancaria';

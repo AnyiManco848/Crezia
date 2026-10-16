@@ -11,6 +11,12 @@ import { DeleteCategoryUseCase } from '../application/categories/DeleteCategoryU
 import { GetCategoryUseCase } from '../application/categories/GetCategoryUseCase';
 import { ListCategoriesUseCase } from '../application/categories/ListCategoriesUseCase';
 import { UpdateCategoryUseCase } from '../application/categories/UpdateCategoryUseCase';
+import type { GoalUseCases } from '../application/goals';
+import { CreateGoalUseCase } from '../application/goals/CreateGoalUseCase';
+import { DeleteGoalUseCase } from '../application/goals/DeleteGoalUseCase';
+import { GetGoalUseCase } from '../application/goals/GetGoalUseCase';
+import { ListGoalsUseCase } from '../application/goals/ListGoalsUseCase';
+import { UpdateGoalUseCase } from '../application/goals/UpdateGoalUseCase';
 import type { MovementUseCases } from '../application/movements';
 import { CreateMovementUseCase } from '../application/movements/CreateMovementUseCase';
 import { DeleteMovementUseCase } from '../application/movements/DeleteMovementUseCase';
@@ -22,6 +28,7 @@ import { createPrismaClient } from './prisma/client';
 import { PrismaBankAccountRepository } from './repositories/PrismaBankAccountRepository';
 import { PrismaCategoryRepository } from './repositories/PrismaCategoryRepository';
 import { PrismaCurrencyRepository } from './repositories/PrismaCurrencyRepository';
+import { PrismaGoalRepository } from './repositories/PrismaGoalRepository';
 import { PrismaMovementRepository } from './repositories/PrismaMovementRepository';
 import { PrismaUserRepository } from './repositories/PrismaUserRepository';
 import { BcryptPasswordHasher } from './security/BcryptPasswordHasher';
@@ -34,6 +41,7 @@ export interface Container {
   categoryUseCases: CategoryUseCases;
   bankAccountUseCases: BankAccountUseCases;
   movementUseCases: MovementUseCases;
+  goalUseCases: GoalUseCases;
 }
 
 export function createContainer(): Container {
@@ -44,6 +52,7 @@ export function createContainer(): Container {
   const bankAccounts = new PrismaBankAccountRepository(prisma);
   const currencies = new PrismaCurrencyRepository(prisma);
   const movements = new PrismaMovementRepository(prisma);
+  const goals = new PrismaGoalRepository(prisma);
 
   return {
     tokenService,
@@ -68,6 +77,13 @@ export function createContainer(): Container {
       create: new CreateMovementUseCase(movements, categories, bankAccounts, currencies),
       update: new UpdateMovementUseCase(movements, categories, bankAccounts, currencies),
       delete: new DeleteMovementUseCase(movements),
+    },
+    goalUseCases: {
+      list: new ListGoalsUseCase(goals),
+      get: new GetGoalUseCase(goals),
+      create: new CreateGoalUseCase(goals, categories, currencies),
+      update: new UpdateGoalUseCase(goals, categories, currencies),
+      delete: new DeleteGoalUseCase(goals),
     },
   };
 }
