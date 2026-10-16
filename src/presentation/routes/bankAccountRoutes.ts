@@ -13,7 +13,7 @@ export function bankAccountRoutes(controller: BankAccountController, tokens: Tok
   router.get('/', controller.list);
   router.get('/:id', validate({ params: idParamsSchema }), controller.get);
   router.post('/', validate({ body: createBankAccountBodySchema }), controller.create);
-  router.put('/:id', validate({ params: idParamsSchema, body: updateBankAccountBodySchema }), controller.update);
+  router.patch('/:id', validate({ params: idParamsSchema, body: updateBankAccountBodySchema }), controller.update);
   router.delete('/:id', validate({ params: idParamsSchema }), controller.delete);
   return router;
 }

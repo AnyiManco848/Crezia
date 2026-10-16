@@ -4,10 +4,12 @@ import type { Container } from './infrastructure/container';
 import { AuthController } from './presentation/controllers/AuthController';
 import { BankAccountController } from './presentation/controllers/BankAccountController';
 import { CategoryController } from './presentation/controllers/CategoryController';
+import { MovementController } from './presentation/controllers/MovementController';
 import { errorHandler, notFound } from './presentation/middlewares/errorHandler';
 import { authRoutes } from './presentation/routes/authRoutes';
 import { bankAccountRoutes } from './presentation/routes/bankAccountRoutes';
 import { categoryRoutes } from './presentation/routes/categoryRoutes';
+import { movementRoutes } from './presentation/routes/movementRoutes';
 
 export function createApp(container: Container) {
   const app = express();
@@ -26,6 +28,10 @@ export function createApp(container: Container) {
   app.use(
     '/api/bank-accounts',
     bankAccountRoutes(new BankAccountController(container.bankAccountUseCases), container.tokenService),
+  );
+  app.use(
+    '/api/movements',
+    movementRoutes(new MovementController(container.movementUseCases), container.tokenService),
   );
 
   app.use(notFound);
