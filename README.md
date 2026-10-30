@@ -61,6 +61,7 @@ npm run db:seed      # prisma db seed: carga los datos de prueba
 |---|---|
 | `npm run dev` | Servidor en modo desarrollo con recarga automática (`tsx watch`). |
 | `npm test` | Pruebas unitarias con Vitest (no necesitan base de datos). |
+| `npm run test:api` | Pruebas de API con Playwright contra el servidor real (ver abajo). |
 | `npm run build` | `prisma generate` + compilación de TypeScript a `dist/`. |
 | `npm start` | Corre la versión compilada (`dist/server.js`). |
 
@@ -175,6 +176,29 @@ Cada meta se devuelve con su progreso: `accumulated`, `remaining` (texto con 2 d
   }
 }
 ```
+
+## Pruebas de API con Playwright
+
+Prueban los `POST` de login, categorías, cuentas, movimientos y metas (casos exitosos y de error) haciendo peticiones HTTP reales; no usan navegador.
+
+```
+playwright.config.ts   baseURL http://localhost:3000; arranca `npm run dev` si el servidor no está corriendo
+fixtures/              auth.fixture.ts: `authToken` (login una vez por worker) y `apiRequest`
+services/              Una función por llamada HTTP (crear, borrar, consultar); los tests no arman URLs
+data/                  Usuario de prueba y payloads válidos reutilizables
+utils/                 Header Authorization, log de la respuesta (oculta el token) y apoyo a la limpieza
+tests/api/<recurso>/   Los specs (*.spec.ts); Vitest no los recoge porque solo corre tests/**/*.test.ts
+```
+
+```powershell
+npm run test:api                         # todas
+npx playwright test tests/api/goals      # una carpeta
+npx playwright show-report               # reporte HTML del último run
+```
+
+- Usan la **base de datos real** del `.env` con el usuario del seed, así que necesitan el seed aplicado. No reinician ni borran la base.
+- Todo lo que crean lleva un nombre único con prefijo `PW` y se borra (soft delete) al terminar cada prueba o cada archivo.
+- Variables opcionales para usar otro usuario: `TEST_EMAIL` y `TEST_PASSWORD` (por ejemplo `$env:TEST_EMAIL="otro@crezia.com"`).
 
 ## Probar en Postman
 
