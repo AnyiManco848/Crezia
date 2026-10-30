@@ -3,3 +3,5 @@ dist/
 .env
 coverage/
 generated/
+playwright-report/
+test-results/
