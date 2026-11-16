@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_LIST_LIMIT, DEFAULT_PAGE, MAX_LIMIT } from '../../application/pagination';
 
 export const idParamsSchema = z.object({
   id: z.uuid({ error: 'El id no es un UUID válido' }),
@@ -23,3 +24,20 @@ export function positiveAmountSchema(label: string, positiveMessage: string) {
         .regex(AMOUNT_FORMAT, { error: `${label} admite hasta 12 dígitos enteros y 2 decimales` }),
     );
 }
+
+// Query of the array-bodied lists. Values arrive as strings, so page and limit are coerced.
+export const paginationQuerySchema = z.object({
+  page: z.coerce
+    .number({ error: 'page debe ser un número' })
+    .int({ error: 'page debe ser un entero' })
+    .min(1, { error: 'page debe ser mayor o igual a 1' })
+    .default(DEFAULT_PAGE),
+  limit: z.coerce
+    .number({ error: 'limit debe ser un número' })
+    .int({ error: 'limit debe ser un entero' })
+    .min(1, { error: 'limit debe ser mayor o igual a 1' })
+    .max(MAX_LIMIT, { error: `limit no puede ser mayor a ${MAX_LIMIT}` })
+    .default(DEFAULT_LIST_LIMIT),
+});
+
+export type PaginationQuery = z.infer<typeof paginationQuerySchema>;

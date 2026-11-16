@@ -1,3 +1,4 @@
+import type { Page, Pagination } from '../../src/domain/pagination';
 import { randomUUID } from 'node:crypto';
 import type { BankAccount } from '../../src/domain/entities/BankAccount';
 import type { MovementType } from '../../src/domain/entities/Movement';
@@ -54,8 +55,9 @@ export class InMemoryBankAccountRepository implements BankAccountRepository {
     this.movements.push({ bankAccountId, type, amount, deletedAt });
   }
 
-  async listByUser(userId: string): Promise<BankAccount[]> {
-    return this.rows.filter((r) => !r.deletedAt && r.userId === userId).map(toPublic);
+  async listByUser(userId: string, { skip, take }: Pagination): Promise<Page<BankAccount>> {
+    const all = this.rows.filter((r) => !r.deletedAt && r.userId === userId);
+    return { data: all.slice(skip, skip + take).map(toPublic), total: all.length };
   }
 
   async findById(id: string): Promise<BankAccount | null> {

@@ -1,9 +1,10 @@
 import type { Movement } from '../../domain/entities/Movement';
 import type { MovementFilters, MovementRepository } from '../../domain/repositories/MovementRepository';
 
-export const DEFAULT_PAGE = 1;
+import { DEFAULT_PAGE, MAX_LIMIT, normalizePage } from '../pagination';
+
+export { DEFAULT_PAGE, MAX_LIMIT };
 export const DEFAULT_LIMIT = 20;
-export const MAX_LIMIT = 100;
 
 export interface ListMovementsInput extends MovementFilters {
   page?: number;
@@ -22,12 +23,8 @@ export class ListMovementsUseCase {
 
   // The schema already applies the defaults and bounds; they are repeated so the use case is safe on its own.
   async execute({ page, limit, ...filters }: ListMovementsInput, userId: string): Promise<MovementList> {
-    const safePage = Math.max(DEFAULT_PAGE, Math.trunc(page ?? DEFAULT_PAGE));
-    const safeLimit = Math.min(MAX_LIMIT, Math.max(1, Math.trunc(limit ?? DEFAULT_LIMIT)));
-    const { data, total } = await this.movements.listByUser(userId, filters, {
-      skip: (safePage - 1) * safeLimit,
-      take: safeLimit,
-    });
+    const { page: safePage, limit: safeLimit, pagination } = normalizePage({ page, limit }, DEFAULT_LIMIT);
+    const { data, total } = await this.movements.listByUser(userId, filters, pagination);
     return { data, page: safePage, limit: safeLimit, total };
   }
 }

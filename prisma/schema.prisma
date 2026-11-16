@@ -285,6 +285,7 @@ model BankAccount {
 
   @@index([userId], map: "idx_bank_accounts_user")
   @@index([currencyCode], map: "idx_bank_accounts_currency")
+  @@index([userId, bankName, createdAt, id], map: "idx_bank_accounts_user_list", where: raw("deleted_at IS NULL"))
   @@map("bank_accounts")
 }
 
@@ -324,6 +325,7 @@ model Movement {
   @@index([categoryId], map: "idx_movements_category")
   @@index([currencyCode], map: "idx_movements_currency")
   @@index([date], map: "idx_movements_date")
+  @@index([userId, date(sort: Desc), createdAt(sort: Desc), id(sort: Desc)], map: "idx_movements_user_date_active", where: raw("deleted_at IS NULL"))
   @@map("movements")
 }
 
@@ -363,6 +365,7 @@ model Goal {
   @@index([userId], map: "idx_goals_user")
   @@index([categoryId], map: "idx_goals_category")
   @@index([currencyCode], map: "idx_goals_currency")
+  @@index([userId, endDate, createdAt, id], map: "idx_goals_user_list", where: raw("deleted_at IS NULL"))
   @@map("goals")
 }
 

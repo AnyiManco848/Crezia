@@ -62,15 +62,26 @@ describe('goal use cases', () => {
 
       const result = await new ListGoalsUseCase(goals).execute(ME);
 
-      expect(result.map((g) => [g.id, g.accumulated, g.remaining, g.percentage])).toEqual([
+      expect(result.data.map((g) => [g.id, g.accumulated, g.remaining, g.percentage])).toEqual([
         [mine.id, '400000.00', '1600000.00', 20],
         [empty.id, '0.00', '100.00', 0],
       ]);
+      expect(result).toMatchObject({ page: 1, limit: 50, total: 2 });
+      expect(goals.sumCalls).toBe(1);
+    });
+
+    it('returns the requested page, the total of all pages and progress only for that page', async () => {
+      const empty = goals.seed({ userId: ME, categoryId: travel.id, targetAmount: '100.00' });
+
+      const result = await new ListGoalsUseCase(goals).execute(ME, { page: 2, limit: 1 });
+
+      expect(result.data.map((g) => g.id)).toEqual([empty.id]);
+      expect(result).toMatchObject({ page: 2, limit: 1, total: 2 });
       expect(goals.sumCalls).toBe(1);
     });
 
     it('does not query totals when the user has no goals', async () => {
-      expect(await new ListGoalsUseCase(goals).execute('nobody')).toEqual([]);
+      expect(await new ListGoalsUseCase(goals).execute('nobody')).toEqual({ data: [], page: 1, limit: 50, total: 0 });
       expect(goals.sumCalls).toBe(0);
     });
   });

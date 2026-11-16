@@ -6,6 +6,7 @@ import { BankAccountController } from './presentation/controllers/BankAccountCon
 import { CategoryController } from './presentation/controllers/CategoryController';
 import { GoalController } from './presentation/controllers/GoalController';
 import { MovementController } from './presentation/controllers/MovementController';
+import { PAGINATION_HEADERS } from './presentation/http/paginationHeaders';
 import { errorHandler, notFound } from './presentation/middlewares/errorHandler';
 import { authRoutes } from './presentation/routes/authRoutes';
 import { bankAccountRoutes } from './presentation/routes/bankAccountRoutes';
@@ -15,7 +16,7 @@ import { movementRoutes } from './presentation/routes/movementRoutes';
 
 export function createApp(container: Container) {
   const app = express();
-  app.use(cors());
+  app.use(cors({ exposedHeaders: [...PAGINATION_HEADERS] }));
   app.use(express.json());
 
   app.get('/api/health', (_req, res) => {

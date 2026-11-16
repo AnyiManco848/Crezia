@@ -1,4 +1,5 @@
 import type { Category } from '../entities/Category';
+import type { Page, Pagination } from '../pagination';
 
 export interface CreateCategoryData {
   userId: string;
@@ -23,7 +24,7 @@ export interface SoftDeleteData {
 // Every read ignores soft-deleted categories.
 export interface CategoryRepository {
   // System categories (userId null) plus the ones owned by userId.
-  listVisibleTo(userId: string): Promise<Category[]>;
+  listVisibleTo(userId: string, pagination: Pagination): Promise<Page<Category>>;
   // Any owner; access rules are applied by the use cases.
   findById(id: string): Promise<Category | null>;
   create(data: CreateCategoryData): Promise<Category>;

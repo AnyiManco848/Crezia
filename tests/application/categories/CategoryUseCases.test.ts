@@ -28,7 +28,15 @@ describe('category use cases', () => {
     it('returns system and own categories, without deleted or foreign ones', async () => {
       const result = await new ListCategoriesUseCase(repo).execute(ME);
 
-      expect(result.map((c) => c.id)).toEqual([system.id, mine.id]);
+      expect(result.data.map((c) => c.id)).toEqual([system.id, mine.id]);
+      expect(result).toMatchObject({ page: 1, limit: 50, total: 2 });
+    });
+
+    it('returns the requested page and the total of all pages', async () => {
+      const result = await new ListCategoriesUseCase(repo).execute(ME, { page: 2, limit: 1 });
+
+      expect(result.data.map((c) => c.id)).toEqual([mine.id]);
+      expect(result).toMatchObject({ page: 2, limit: 1, total: 2 });
     });
   });
 

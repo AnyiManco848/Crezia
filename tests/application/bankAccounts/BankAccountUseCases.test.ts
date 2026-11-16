@@ -45,17 +45,32 @@ describe('bank account use cases', () => {
     it('returns only own non-deleted accounts with their balances in one totals query', async () => {
       const result = await new ListBankAccountsUseCase(repo).execute(ME);
 
-      expect(result.map((a) => [a.id, a.balance])).toEqual([
+      expect(result.data.map((a) => [a.id, a.balance])).toEqual([
         [mine.id, '2300000.00'],
         [empty.id, '0.00'],
       ]);
+      expect(result).toMatchObject({ page: 1, limit: 50, total: 2 });
       expect(repo.sumCalls).toBe(1);
+    });
+
+    it('returns the requested page, the total of all pages and totals only for that page', async () => {
+      const result = await new ListBankAccountsUseCase(repo).execute(ME, { page: 2, limit: 1 });
+
+      expect(result.data.map((a) => [a.id, a.balance])).toEqual([[empty.id, '0.00']]);
+      expect(result).toMatchObject({ page: 2, limit: 1, total: 2 });
+      expect(repo.sumCalls).toBe(1);
+    });
+
+    it('clamps limit to 100 and page to at least 1', async () => {
+      const result = await new ListBankAccountsUseCase(repo).execute(ME, { page: 0, limit: 5000 });
+
+      expect(result).toMatchObject({ page: 1, limit: 100 });
     });
 
     it('does not query totals when the user has no accounts', async () => {
       const result = await new ListBankAccountsUseCase(repo).execute('nobody');
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ data: [], page: 1, limit: 50, total: 0 });
       expect(repo.sumCalls).toBe(0);
     });
   });

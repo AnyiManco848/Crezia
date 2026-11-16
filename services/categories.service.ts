@@ -17,3 +17,11 @@ export function deleteCategory(request: APIRequestContext, token: string, id: st
 export function getCategory(request: APIRequestContext, token: string, id: string): Promise<APIResponse> {
   return request.get(`/api/categories/${id}`, { headers: authHeaders(token) });
 }
+
+export function listCategories(
+  request: APIRequestContext,
+  token: string | undefined,
+  query: Record<string, string | number> = {},
+): Promise<APIResponse> {
+  return request.get('/api/categories', { headers: authHeaders(token), params: query });
+}

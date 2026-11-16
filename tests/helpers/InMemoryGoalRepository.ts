@@ -1,3 +1,4 @@
+import type { Page, Pagination } from '../../src/domain/pagination';
 import { randomUUID } from 'node:crypto';
 import { isGoalContribution, type ContributionEntry } from '../../src/application/goals/progress';
 import { fromCents, toCents } from '../../src/application/money';
@@ -50,8 +51,9 @@ export class InMemoryGoalRepository implements GoalRepository {
     this.movements.push(entry);
   }
 
-  async listByUser(userId: string): Promise<Goal[]> {
-    return this.rows.filter((r) => !r.deletedAt && r.userId === userId).map(toPublic);
+  async listByUser(userId: string, { skip, take }: Pagination): Promise<Page<Goal>> {
+    const all = this.rows.filter((r) => !r.deletedAt && r.userId === userId);
+    return { data: all.slice(skip, skip + take).map(toPublic), total: all.length };
   }
 
   async findById(id: string): Promise<Goal | null> {

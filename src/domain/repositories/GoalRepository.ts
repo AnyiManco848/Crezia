@@ -1,4 +1,5 @@
 import type { Goal, GoalReason, GoalStatus } from '../entities/Goal';
+import type { Page, Pagination } from '../pagination';
 import type { SoftDeleteData } from './CategoryRepository';
 
 export type { SoftDeleteData };
@@ -39,7 +40,8 @@ export interface GoalTotal {
 
 // Every read ignores soft-deleted goals.
 export interface GoalRepository {
-  listByUser(userId: string): Promise<Goal[]>;
+  // Ordered by end date, creation date and id, so pages are stable.
+  listByUser(userId: string, pagination: Pagination): Promise<Page<Goal>>;
   // Any owner; access rules are applied by the use cases.
   findById(id: string): Promise<Goal | null>;
   // Throws ConflictError when the partial unique index rejects the row (concurrent requests).

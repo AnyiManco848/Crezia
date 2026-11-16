@@ -55,7 +55,8 @@ export class PrismaMovementRepository implements MovementRepository {
       bankAccountId,
       date: from || to ? { gte: from ? toDbDate(from) : undefined, lte: to ? toDbDate(to) : undefined } : undefined,
     };
-    const [rows, total] = await this.prisma.$transaction([
+    // Two independent reads: no transaction (BEGIN/COMMIT round trips) is needed for a page and its total.
+    const [rows, total] = await Promise.all([
       this.prisma.movement.findMany({
         where,
         // created_at and id break ties inside the same day so pages are stable.
