@@ -42,10 +42,28 @@ export interface MovementFilters {
 
 export type MovementPage = Page<Movement>;
 
+// from and to are inclusive "YYYY-MM-DD" dates; every total is of a single currency.
+export interface MovementSummaryFilter {
+  from: string;
+  to: string;
+  currencyCode: string;
+}
+
+// Sum and count of the movements of one type inside the period.
+export interface MovementTypeTotal {
+  type: MovementType;
+  // Decimal string with up to two places, as NUMERIC(14,2) arrives from the database.
+  amount: string;
+  count: number;
+}
+
 // Every read ignores soft-deleted movements (but not the ones of a deleted account).
 export interface MovementRepository {
   // Ordered by date descending, newest first.
   listByUser(userId: string, filters: MovementFilters, pagination: Pagination): Promise<MovementPage>;
+  // Totals by type for the whole period (no pagination): only the owner's movements, in the given currency.
+  // Returns at most one entry per type; a type without movements is omitted.
+  sumByTypeInPeriod(userId: string, filter: MovementSummaryFilter): Promise<MovementTypeTotal[]>;
   // Any owner; access rules are applied by the use cases.
   findById(id: string): Promise<Movement | null>;
   create(data: CreateMovementData): Promise<Movement>;

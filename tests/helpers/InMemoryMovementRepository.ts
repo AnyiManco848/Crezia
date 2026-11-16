@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import type { Movement } from '../../src/domain/entities/Movement';
+import { fromCents, toCents } from '../../src/application/money';
+import type { Movement, MovementType } from '../../src/domain/entities/Movement';
 import type {
   CreateMovementData,
   MovementFilters,
   MovementPage,
   MovementRepository,
+  MovementSummaryFilter,
+  MovementTypeTotal,
   Pagination,
   SoftDeleteData,
   UpdateMovementData,
@@ -59,6 +62,23 @@ export class InMemoryMovementRepository implements MovementRepository {
       )
       .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.getTime() - a.createdAt.getTime());
     return { data: matching.slice(skip, skip + take).map(toPublic), total: matching.length };
+  }
+
+  // Same rules as the real repository: owner, currency, inclusive date range and not deleted; grouped by type.
+  async sumByTypeInPeriod(
+    userId: string,
+    { from, to, currencyCode }: MovementSummaryFilter,
+  ): Promise<MovementTypeTotal[]> {
+    const byType = new Map<MovementType, { cents: number; count: number }>();
+    for (const row of this.rows) {
+      if (row.deletedAt || row.userId !== userId || row.currencyCode !== currencyCode) continue;
+      if (row.date < from || row.date > to) continue;
+      const group = byType.get(row.type) ?? { cents: 0, count: 0 };
+      group.cents += toCents(row.amount);
+      group.count += 1;
+      byType.set(row.type, group);
+    }
+    return [...byType].map(([type, { cents, count }]) => ({ type, amount: fromCents(cents), count }));
   }
 
   async findById(id: string): Promise<Movement | null> {
