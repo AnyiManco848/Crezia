@@ -1,7 +1,12 @@
 import type { Request, Response } from 'express';
 import type { MovementUseCases } from '../../application/movements';
 import type { IdParams } from '../schemas/commonSchemas';
-import type { CreateMovementBody, ListMovementsQuery, UpdateMovementBody } from '../schemas/movementSchemas';
+import type {
+  CreateMovementBody,
+  ListMovementsQuery,
+  MovementSummaryQuery,
+  UpdateMovementBody,
+} from '../schemas/movementSchemas';
 
 // Every route runs behind the auth middleware, so req.user is always set.
 export class MovementController {
@@ -10,6 +15,11 @@ export class MovementController {
   // req.query was replaced by the parsed query in the validate middleware.
   list = async (req: Request, res: Response) => {
     res.json(await this.useCases.list.execute(req.query as unknown as ListMovementsQuery, req.user!.id));
+  };
+
+  // The owner always comes from the token: the query only carries the period and the currency.
+  summary = async (req: Request, res: Response) => {
+    res.json(await this.useCases.summary.execute(req.query as unknown as MovementSummaryQuery, req.user!.id));
   };
 
   get = async (req: Request<IdParams>, res: Response) => {

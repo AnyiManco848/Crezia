@@ -14,6 +14,14 @@ export function deleteMovement(request: APIRequestContext, token: string, id: st
   return request.delete(`/api/movements/${id}`, { headers: authHeaders(token) });
 }
 
+export function getMovementSummary(
+  request: APIRequestContext,
+  token: string | undefined,
+  query: Record<string, string | number> = {},
+): Promise<APIResponse> {
+  return request.get('/api/movements/summary', { headers: authHeaders(token), params: query });
+}
+
 export function getMovement(request: APIRequestContext, token: string, id: string): Promise<APIResponse> {
   return request.get(`/api/movements/${id}`, { headers: authHeaders(token) });
 }

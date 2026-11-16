@@ -4,6 +4,8 @@ import type {
   MovementFilters,
   MovementPage,
   MovementRepository,
+  MovementSummaryFilter,
+  MovementTypeTotal,
   Pagination,
   SoftDeleteData,
   UpdateMovementData,
@@ -68,6 +70,26 @@ export class PrismaMovementRepository implements MovementRepository {
       this.prisma.movement.count({ where }),
     ]);
     return { data: rows.map(toMovement), total };
+  }
+
+  // SELECT type, SUM(amount), COUNT(*) ... WHERE user_id, currency and date range, not deleted GROUP BY type.
+  // One query, at most two rows; it uses idx_movements_user_date_active. Like listByUser, it keeps the
+  // movements of a deleted account.
+  async sumByTypeInPeriod(
+    userId: string,
+    { from, to, currencyCode }: MovementSummaryFilter,
+  ): Promise<MovementTypeTotal[]> {
+    const rows = await this.prisma.movement.groupBy({
+      by: ['type'],
+      where: { userId, deletedAt: null, currencyCode, date: { gte: toDbDate(from), lte: toDbDate(to) } },
+      _sum: { amount: true },
+      _count: { _all: true },
+    });
+    return rows.map((row) => ({
+      type: row.type,
+      amount: row._sum.amount?.toFixed(2) ?? '0.00',
+      count: row._count._all,
+    }));
   }
 
   async findById(id: string): Promise<Movement | null> {

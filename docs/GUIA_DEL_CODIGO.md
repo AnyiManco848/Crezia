@@ -188,11 +188,13 @@ No las "implementa" ninguna clase: son **formas de datos**. Los repositorios dev
 | `CreateCategoryInput`, `UpdateCategoryInput` | `categories/CreateCategoryUseCase.ts:4`, `UpdateCategoryUseCase.ts:5` | Lo que el usuario puede mandar. |
 | `CreateBankAccountInput`, `UpdateBankAccountInput` | `bankAccounts/CreateBankAccountUseCase.ts:6`, `UpdateBankAccountUseCase.ts:9` | Ídem para cuentas. |
 | `CreateMovementInput`, `UpdateMovementInput` | `movements/CreateMovementUseCase.ts:8`, `UpdateMovementUseCase.ts:15` | Ídem para movimientos. |
-| `ListMovementsInput`, `MovementList` | `movements/ListMovementsUseCase.ts:8`, `:13` | Filtros + `page`/`limit`; respuesta `{ data, page, limit, total }`. |
+| `ListMovementsInput`, `MovementList` | `movements/ListMovementsUseCase.ts` | Filtros + `page`/`limit`; respuesta `{ data, page, limit, total }`. |
+| `PageParams`, `PageInfo`, `PagedResult<T>` | `application/pagination.ts` | Parámetros y resultado de las listas de cuentas, metas y categorías: `{ data, page, limit, total }` dentro de la aplicación (la API devuelve solo `data` y manda el resto en cabeceras). |
+| `Pagination`, `Page<T>` | `domain/pagination.ts` | Lo que reciben y devuelven los repositorios de lista: `{ skip, take }` y `{ data, total }`. |
 | `CreateGoalInput`, `UpdateGoalInput` | `goals/CreateGoalUseCase.ts:17`, `UpdateGoalUseCase.ts:21` | Ídem para metas. |
 | `BalanceEntry` | `bankAccounts/balance.ts:6` | Entrada mínima para calcular un saldo. |
 | `ContributionEntry` | `goals/progress.ts:6` | Entrada mínima para saber si un movimiento cuenta para una meta. |
-| `CategoryUseCases`, `BankAccountUseCases`, `MovementUseCases`, `GoalUseCases` | `*/index.ts` de cada carpeta | Agrupan los 5 casos de uso (`list`, `get`, `create`, `update`, `delete`) que recibe cada controller. |
+| `CategoryUseCases`, `BankAccountUseCases`, `MovementUseCases`, `GoalUseCases` | `*/index.ts` de cada carpeta | Agrupan los casos de uso (`list`, `get`, `create`, `update`, `delete`; `MovementUseCases` suma `summary`) que recibe cada controller. |
 | `Container` | `src/infrastructure/container.ts:38` | Todo lo que `app.ts` necesita: `tokenService` y los grupos de casos de uso. |
 
 ### 4.5 Tipos de infraestructura
@@ -236,22 +238,23 @@ Las rutas se montan en `src/app.ts:21-38` y se definen en `src/presentation/rout
 |---|---|---|---|---|---|---|
 | GET | `/api/health` | `src/app.ts:21` (en línea) | — (función anónima) | — | No | — |
 | POST | `/api/auth/login` | `authRoutes.ts:8` | `AuthController.login` | `LoginUseCase` | No | body: `loginBodySchema` |
-| GET | `/api/categories` | `categoryRoutes.ts:13` | `CategoryController.list` | `ListCategoriesUseCase` | Sí | — |
+| GET | `/api/categories` | `categoryRoutes.ts` | `CategoryController.list` | `ListCategoriesUseCase` | Sí | query `page`, `limit` (ver 5.1) |
 | GET | `/api/categories/:id` | `categoryRoutes.ts:14` | `CategoryController.get` | `GetCategoryUseCase` | Sí | params: `idParamsSchema` |
 | POST | `/api/categories` | `categoryRoutes.ts:15` | `CategoryController.create` | `CreateCategoryUseCase` | Sí | body: `createCategoryBodySchema` |
 | PATCH | `/api/categories/:id` | `categoryRoutes.ts:16` | `CategoryController.update` | `UpdateCategoryUseCase` | Sí | params: `idParamsSchema` + body: `updateCategoryBodySchema` |
 | DELETE | `/api/categories/:id` | `categoryRoutes.ts:17` | `CategoryController.delete` | `DeleteCategoryUseCase` | Sí | params: `idParamsSchema` |
-| GET | `/api/bank-accounts` | `bankAccountRoutes.ts:13` | `BankAccountController.list` | `ListBankAccountsUseCase` | Sí | — |
+| GET | `/api/bank-accounts` | `bankAccountRoutes.ts` | `BankAccountController.list` | `ListBankAccountsUseCase` | Sí | query `page`, `limit` (ver 5.1) |
 | GET | `/api/bank-accounts/:id` | `bankAccountRoutes.ts:14` | `BankAccountController.get` | `GetBankAccountUseCase` | Sí | params: `idParamsSchema` |
 | POST | `/api/bank-accounts` | `bankAccountRoutes.ts:15` | `BankAccountController.create` | `CreateBankAccountUseCase` | Sí | body: `createBankAccountBodySchema` |
 | PATCH | `/api/bank-accounts/:id` | `bankAccountRoutes.ts:16` | `BankAccountController.update` | `UpdateBankAccountUseCase` | Sí | params: `idParamsSchema` + body: `updateBankAccountBodySchema` |
 | DELETE | `/api/bank-accounts/:id` | `bankAccountRoutes.ts:17` | `BankAccountController.delete` | `DeleteBankAccountUseCase` | Sí | params: `idParamsSchema` |
 | GET | `/api/movements` | `movementRoutes.ts:17` | `MovementController.list` | `ListMovementsUseCase` | Sí | query: `listMovementsQuerySchema` |
+| GET | `/api/movements/summary` | `movementRoutes.ts` | `MovementController.summary` | `GetMovementSummaryUseCase` | Sí | query: `movementSummaryQuerySchema` (declarada **antes** de `/:id`) |
 | GET | `/api/movements/:id` | `movementRoutes.ts:18` | `MovementController.get` | `GetMovementUseCase` | Sí | params: `idParamsSchema` |
 | POST | `/api/movements` | `movementRoutes.ts:19` | `MovementController.create` | `CreateMovementUseCase` | Sí | body: `createMovementBodySchema` |
 | PATCH | `/api/movements/:id` | `movementRoutes.ts:20` | `MovementController.update` | `UpdateMovementUseCase` | Sí | params: `idParamsSchema` + body: `updateMovementBodySchema` |
 | DELETE | `/api/movements/:id` | `movementRoutes.ts:21` | `MovementController.delete` | `DeleteMovementUseCase` | Sí | params: `idParamsSchema` |
-| GET | `/api/goals` | `goalRoutes.ts:13` | `GoalController.list` | `ListGoalsUseCase` | Sí | — |
+| GET | `/api/goals` | `goalRoutes.ts` | `GoalController.list` | `ListGoalsUseCase` | Sí | query `page`, `limit` (ver 5.1) |
 | GET | `/api/goals/:id` | `goalRoutes.ts:14` | `GoalController.get` | `GetGoalUseCase` | Sí | params: `idParamsSchema` |
 | POST | `/api/goals` | `goalRoutes.ts:15` | `GoalController.create` | `CreateGoalUseCase` | Sí | body: `createGoalBodySchema` |
 | PATCH | `/api/goals/:id` | `goalRoutes.ts:16` | `GoalController.update` | `UpdateGoalUseCase` | Sí | params: `idParamsSchema` + body: `updateGoalBodySchema` |
@@ -262,6 +265,30 @@ Todos los archivos de rutas están en `src/presentation/routes/` y los controlle
 **Lo que NO existe todavía** (para que no lo busques): no hay registro de usuarios (`/register`), ni endpoints de usuario/perfil, monedas, correos, contenido educativo ni notificaciones, aunque esas tablas sí existen en la base.
 
 **Respuestas de éxito:** GET y PATCH → 200 con el recurso; POST → 201 (`res.status(201)`); DELETE → 200 con `{ message: "… eliminada/o con éxito" }`.
+
+---
+
+### 5.1 Paginación de las listas de categorías, cuentas y metas
+
+`GET /api/categories`, `GET /api/bank-accounts` y `GET /api/goals` aceptan `page` (por defecto 1, mínimo 1) y `limit` (por defecto 50, entre 1 y 100). **El cuerpo sigue siendo un array**; el total y la página viajan en cabeceras:
+
+| Cabecera | Valor |
+|---|---|
+| `X-Total-Count` | Total de elementos que cumplen la consulta, sin paginar |
+| `X-Page` | Página devuelta |
+| `X-Limit` | Tamaño de página aplicado |
+
+Cómo está armado (de afuera hacia adentro):
+
+1. **Ruta:** `validate({ query: paginationQuerySchema })` (`presentation/schemas/commonSchemas.ts`) convierte `page` y `limit` a número y aplica los valores por defecto. Un valor inválido responde 400 `VALIDATION_ERROR`.
+2. **Controlador:** pasa `req.query` al caso de uso y responde con `sendPage` (`presentation/http/paginationHeaders.ts`): pone las tres cabeceras y envía solo `data` como cuerpo.
+3. **Caso de uso:** `normalizePage` (`application/pagination.ts`) repite los límites (por si se usa fuera de HTTP) y calcula `skip = (page − 1) × limit`. El saldo de las cuentas y el progreso de las metas se calculan solo para la página.
+4. **Repositorio:** `listByUser` / `listVisibleTo` reciben `{ skip, take }`, ejecutan `findMany` y `count` en paralelo y devuelven `{ data, total }`. El `orderBy` termina en `id` para que las páginas sean estables.
+5. **CORS:** `cors({ exposedHeaders })` en `app.ts` permite que el navegador lea esas cabeceras desde otro origen.
+
+`GET /api/movements` no cambia: devuelve `{ data, page, limit, total }` y su `limit` por defecto es 20.
+
+> Aviso: los números de línea que aparecen en otras secciones de esta guía se escribieron antes de la paginación, del pool configurable y del ajuste del threadpool, y pueden haberse movido unas líneas. Los nombres de archivo y de función siguen siendo válidos.
 
 ---
 
@@ -282,7 +309,7 @@ Content-Type: application/json
 
 Por dónde pasa, en orden:
 
-1. **`src/app.ts:18` — `cors()`**: agrega cabeceras CORS para que un frontend en otro dominio pueda llamar a la API.
+1. **`src/app.ts` — `cors({ exposedHeaders })`**: agrega cabeceras CORS para que un frontend en otro dominio pueda llamar a la API y deja que lea las cabeceras de paginación `X-Total-Count`, `X-Page` y `X-Limit`.
 2. **`src/app.ts:19` — `express.json()`**: convierte el texto del body en un objeto JS (`req.body`). Si el JSON está mal escrito, Express genera un error con `type: 'entity.parse.failed'` que termina en el `errorHandler` como **400 `INVALID_JSON`** (`errorHandler.ts:34`).
 3. **`src/app.ts:34-37`**: la URL empieza por `/api/movements`, así que Express entra al router de `movementRoutes(...)`.
 4. **`src/presentation/routes/movementRoutes.ts:15` — `router.use(auth(tokens))`**: corre el middleware de autenticación:
@@ -325,7 +352,7 @@ Por dónde pasa, en orden:
 
 | Middleware | Archivo | Dónde se aplica | Qué hace |
 |---|---|---|---|
-| `cors()` | librería `cors`, registrado en `src/app.ts:18` | Global (todas las peticiones) | Permite llamadas desde otros orígenes (frontend). |
+| `cors({ exposedHeaders })` | librería `cors`, registrado en `src/app.ts` | Global (todas las peticiones) | Permite llamadas desde otros orígenes (frontend) y expone `X-Total-Count`, `X-Page` y `X-Limit` (`PAGINATION_HEADERS` en `presentation/http/paginationHeaders.ts`). |
 | `express.json()` | Express, registrado en `src/app.ts:19` | Global | Convierte el body JSON en `req.body`. |
 | `auth(tokens)` | `src/presentation/middlewares/auth.ts:7` | Con `router.use` en `categoryRoutes.ts:11`, `bankAccountRoutes.ts:11`, `movementRoutes.ts:15`, `goalRoutes.ts:11`. **No** en `authRoutes` ni en `/api/health`. | Valida el token Bearer y llena `req.user`. |
 | `validate(schemas)` | `src/presentation/middlewares/validate.ts:12` | Por ruta, dentro de cada archivo de rutas (ver tabla de la sección 5). | Valida y limpia `body`, `params` y `query` con zod. |
@@ -372,7 +399,7 @@ Todos reciben sus repositorios por el **constructor** y tienen un método `execu
 
 | Caso de uso | Archivo | Regla de negocio |
 |---|---|---|
-| `ListCategoriesUseCase` | `ListCategoriesUseCase.ts` | Devuelve las del sistema (`userId` null) + las tuyas, sin borradas. Orden: sistema primero, luego por nombre (`PrismaCategoryRepository.ts:28`). |
+| `ListCategoriesUseCase` | `ListCategoriesUseCase.ts` | Devuelve una página de las del sistema (`userId` null) + las tuyas, sin borradas, con el total. Orden: sistema primero, luego por nombre y `id` (`PrismaCategoryRepository.listVisibleTo`). `page` por defecto 1, `limit` por defecto 50. |
 | `GetCategoryUseCase` | `GetCategoryUseCase.ts` | Usa `findVisibleCategory` (`categoryAccess.ts:9`): categoría de otro usuario → **404**. |
 | `CreateCategoryUseCase` | `CreateCategoryUseCase.ts` | El dueño siempre es el usuario autenticado y `isDefault` siempre es `false`, aunque el cliente mande otra cosa. |
 | `UpdateCategoryUseCase` | `UpdateCategoryUseCase.ts` | Usa `findOwnedCategory` (`categoryAccess.ts:22`): las del sistema son de solo lectura → **403**. |
@@ -382,7 +409,7 @@ Todos reciben sus repositorios por el **constructor** y tienen un método `execu
 
 | Caso de uso | Archivo | Regla de negocio |
 |---|---|---|
-| `ListBankAccountsUseCase` | `ListBankAccountsUseCase.ts` | Trae tus cuentas y **en una sola consulta agrupada** los totales de movimientos; calcula el saldo de cada una (`balance.ts:25`). |
+| `ListBankAccountsUseCase` | `ListBankAccountsUseCase.ts` | Trae una página de tus cuentas (con el total) y **en una sola consulta agrupada** los totales de movimientos de esa página; calcula el saldo de cada una (`balance.ts`). `page` por defecto 1, `limit` por defecto 50. |
 | `GetBankAccountUseCase` | `GetBankAccountUseCase.ts` | Cuenta ajena → 404 (`bankAccountAccess.ts:11`). Devuelve la cuenta con su saldo. |
 | `CreateBankAccountUseCase` | `CreateBankAccountUseCase.ts` | La moneda debe existir y estar activa (`ensureActiveCurrency`, `bankAccountAccess.ts:31`) → si no, 400. Una cuenta nueva sale con `balance: "0.00"`. |
 | `UpdateBankAccountUseCase` | `UpdateBankAccountUseCase.ts` | Cambiar la moneda solo si es activa y **la cuenta no tiene movimientos** → si tiene, **409** (`:32`). Mandar la misma moneda está permitido. |
@@ -395,6 +422,7 @@ Todos reciben sus repositorios por el **constructor** y tienen un método `execu
 | Caso de uso | Archivo | Regla de negocio |
 |---|---|---|
 | `ListMovementsUseCase` | `ListMovementsUseCase.ts` | Solo tus movimientos no borrados, con filtros, orden por fecha descendente y paginación (`page` ≥ 1, `limit` entre 1 y 100). Incluye movimientos de cuentas borradas. |
+| `GetMovementSummaryUseCase` | `GetMovementSummaryUseCase.ts` | Totales de ingresos y egresos del periodo `from`–`to` (inclusivo, máximo 366 días) para el usuario del token, en una sola moneda (`COP` por defecto). Suma en centavos sobre **todo** el periodo (no una página), ignora borrados y devuelve `balance` y `movementCount`. El repositorio lo resuelve con un `groupBy` por tipo (`sumByTypeInPeriod`). |
 | `GetMovementUseCase` | `GetMovementUseCase.ts` | Movimiento ajeno → 404 (`movementAccess.ts:27`). |
 | `CreateMovementUseCase` | `CreateMovementUseCase.ts` | Monto > 0; categoría visible; cuenta tuya y no borrada; moneda = la de la cuenta (o obligatoria y activa si no hay cuenta); `source` siempre `Manual`. Ver sección 6.1. |
 | `UpdateMovementUseCase` | `UpdateMovementUseCase.ts` | Solo valida lo que **realmente cambia** (`:41-64`): así puedes reenviar campos iguales de un movimiento cuya categoría se borró después. Si cambia cuenta, moneda, monto o tipo, la cuenta debe seguir siendo usable. `bankAccountId: null` lo desliga de la cuenta. |
@@ -404,7 +432,7 @@ Todos reciben sus repositorios por el **constructor** y tienen un método `execu
 
 | Caso de uso | Archivo | Regla de negocio |
 |---|---|---|
-| `ListGoalsUseCase` | `ListGoalsUseCase.ts` | Tus metas no borradas + su progreso, calculado en **una sola** consulta SQL (`sumContributions`). Orden: fecha fin ascendente. |
+| `ListGoalsUseCase` | `ListGoalsUseCase.ts` | Una página de tus metas no borradas (con el total) + su progreso, calculado en **una sola** consulta SQL (`sumContributions`) solo para esa página. Orden: fecha fin ascendente, fecha de creación e `id`. `page` por defecto 1, `limit` por defecto 50. |
 | `GetGoalUseCase` | `GetGoalUseCase.ts` | Meta ajena → 404 (`goalAccess.ts:29`). Devuelve la meta con progreso. |
 | `CreateGoalUseCase` | `CreateGoalUseCase.ts` | `targetAmount` > 0; `endDate` **posterior** a `startDate` (`goalAccess.ts:48`); `endDate` no en el pasado (`:52`); `reasonOther` obligatorio solo si `reason` es `Other` (`:57`); categoría usable; moneda activa; **una sola meta activa por categoría** → si no, **409** (`:63`). Siempre nace `Active`. Puede nacer con progreso si ya había gastos en esa categoría y rango. |
 | `UpdateGoalUseCase` | `UpdateGoalUseCase.ts` | Valida combinando lo que mandas con lo que ya está guardado. La fecha fin **sí** puede quedar en el pasado al editar. Si cambias de `Other` a otro motivo, borra el `reasonOther` viejo (`:55`). Revisa el conflicto de meta activa solo si la meta se reactiva o cambia de categoría (`:66-69`). |
@@ -498,7 +526,7 @@ Otro detalle de `PrismaGoalRepository`: `withActiveGoalConflict` (`:46-55`) atra
 | `toCents(amount)` | `src/application/money.ts:5`; usado en `balance.ts:18`, `progress.ts:35-36` y `:48`, y en `tests/helpers/InMemoryGoalRepository.ts:97` | Pasa `"85000.50"` a `8500050` (entero), para sumar sin errores de decimales (`0.1 + 0.2 ≠ 0.3`). |
 | `fromCents(cents)` | `src/application/money.ts:14`; usado en `balance.ts:21`, `progress.ts:41` y `:50` | Lo contrario: `8500050` → `"85000.50"`. |
 | `isGoalContribution(goal, entry)` | `src/application/goals/progress.ts:21`; usado en `progressFromMovements` (`progress.ts:48`) y en `InMemoryGoalRepository.ts:95` | Decide si un movimiento cuenta para una meta. Es la regla "oficial" en código; el SQL de `sumContributions` la repite. En producción el cálculo lo hace el SQL; esta función se usa en pruebas. |
-| Paginación `page` / `limit` | Schema: `src/presentation/schemas/movementSchemas.ts:69-79` (por defecto 1 y 20, máximo 100; `z.coerce` convierte el texto de la URL a número). Caso de uso: `ListMovementsUseCase.ts:25-30` (repite los límites y calcula `skip = (page − 1) × limit`). Repositorio: `PrismaMovementRepository.ts:58-68` | El repositorio hace `findMany` (la página) y `count` (el total) **dentro de una misma `$transaction`**, para que ambos números sean coherentes. Respuesta: `{ data, page, limit, total }`. |
+| Paginación `page` / `limit` | Schema: `src/presentation/schemas/movementSchemas.ts:69-79` (por defecto 1 y 20, máximo 100; `z.coerce` convierte el texto de la URL a número). Caso de uso: `ListMovementsUseCase.ts:25-30` (repite los límites y calcula `skip = (page − 1) × limit`). Repositorio: `PrismaMovementRepository.ts:58-68` | El repositorio hace `findMany` (la página) y `count` (el total) **en paralelo con `Promise.all`**, sin transacción: son dos lecturas independientes y así se evitan los `BEGIN`/`COMMIT`. Respuesta: `{ data, page, limit, total }`. |
 
 ---
 
@@ -518,11 +546,12 @@ tests/
 │   ├── auth/LoginUseCase.test.ts
 │   ├── categories/CategoryUseCases.test.ts
 │   ├── bankAccounts/BankAccountUseCases.test.ts y balance.test.ts
-│   ├── movements/MovementUseCases.test.ts
+│   ├── movements/MovementUseCases.test.ts y GetMovementSummaryUseCase.test.ts
 │   └── goals/GoalUseCases.test.ts y progress.test.ts
 └── presentation/
     ├── middlewares/  auth.test.ts, validate.test.ts, errorHandler.test.ts
-    └── schemas/      categorySchemas, bankAccountSchemas, movementSchemas, goalSchemas (.test.ts)
+    ├── routes/       movementRoutes.test.ts (router real sobre un servidor HTTP local, con casos de uso falsos)
+    └── schemas/      categorySchemas, bankAccountSchemas, movementSchemas, movementSummaryQuerySchema, goalSchemas (.test.ts)
 ```
 
 La carpeta `tests/` imita la estructura de `src/`, así sabes qué prueba corresponde a qué archivo.

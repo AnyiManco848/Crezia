@@ -90,6 +90,34 @@ Todas las rutas empiezan por `/api`. Salvo el login y el health, **todas requier
 - Los campos que no están en el schema (`userId`, `source`, `balance`...) se ignoran.
 - Montos: número o texto con hasta 2 decimales (`85000` o `"85000.50"`); se devuelven como texto (`"85000.50"`). Fechas: `AAAA-MM-DD`.
 
+### Paginación de cuentas, categorías y metas
+
+`GET /api/categories`, `GET /api/bank-accounts` y `GET /api/goals` están paginados. **El cuerpo sigue siendo un array**; los totales viajan en las cabeceras de la respuesta:
+
+| Query | Por defecto | Reglas |
+|---|---|---|
+| `page` | `1` | Entero ≥ 1 |
+| `limit` | `50` | Entero entre 1 y 100 |
+
+| Cabecera | Significado |
+|---|---|
+| `X-Total-Count` | Total de elementos que cumplen la consulta, sin contar la paginación |
+| `X-Page` | Página devuelta |
+| `X-Limit` | Tamaño de página aplicado |
+
+- Un `page` o `limit` inválido responde **400** `VALIDATION_ERROR` (por ejemplo `limit=101`, `limit=0` o `page=abc`).
+- Una página más allá de la última responde **200** con un array vacío y el mismo `X-Total-Count`.
+- Sin parámetros se devuelven solo los primeros 50 elementos: para ver todos hay que pedir más páginas hasta cubrir `X-Total-Count`.
+- El saldo de cada cuenta y el progreso de cada meta se calculan solo para los elementos de la página devuelta.
+- El orden es estable (se desempata por `id`): categorías, sistema primero y luego por nombre; cuentas, por banco y fecha de creación; metas, por fecha fin y fecha de creación.
+- Las cabeceras están expuestas con `cors({ exposedHeaders })`, así que un front en otro origen puede leerlas con `response.headers.get('X-Total-Count')`.
+- **`GET /api/movements` no cambia:** mantiene su formato `{ data, page, limit, total }` y `limit` por defecto 20.
+
+```
+GET /api/bank-accounts?page=2&limit=20
+→ 200  X-Total-Count: 57  X-Page: 2  X-Limit: 20   (cuerpo: array de hasta 20 cuentas)
+```
+
 ### Auth
 
 | Método | Ruta | Token | Body | Respuestas |
@@ -102,7 +130,7 @@ Lista las del sistema y las propias.
 
 | Método | Ruta | Token | Body | Respuestas |
 |---|---|---|---|---|
-| GET | `/api/categories` | Sí | — | 200 |
+| GET | `/api/categories` | Sí | — (ver [paginación](#paginación-de-cuentas-categorías-y-metas)) | 200 (array) · 400 |
 | GET | `/api/categories/:id` | Sí | — | 200 · 404 |
 | POST | `/api/categories` | Sí | `{ "name": "Mascotas", "description": "Comida y veterinario" }` | 201 · 400 |
 | PATCH | `/api/categories/:id` | Sí | `{ "description": "Solo veterinario" }` | 200 · 400 · 403 categoría del sistema · 404 |
@@ -114,7 +142,7 @@ Cada cuenta se devuelve con su `balance` calculado. `accountType`: `Savings`, `C
 
 | Método | Ruta | Token | Body | Respuestas |
 |---|---|---|---|---|
-| GET | `/api/bank-accounts` | Sí | — | 200 |
+| GET | `/api/bank-accounts` | Sí | — (ver [paginación](#paginación-de-cuentas-categorías-y-metas)) | 200 (array) · 400 |
 | GET | `/api/bank-accounts/:id` | Sí | — | 200 · 404 |
 | POST | `/api/bank-accounts` | Sí | `{ "bankName": "Nequi", "accountAlias": "Gastos", "accountType": "Savings", "currencyCode": "COP" }` | 201 · 400 (incluye moneda inexistente o inactiva) |
 | PATCH | `/api/bank-accounts/:id` | Sí | `{ "accountAlias": "Nómina" }` | 200 · 400 · 404 · 409 cambio de moneda con movimientos |
@@ -127,6 +155,7 @@ Cada cuenta se devuelve con su `balance` calculado. `accountType`: `Savings`, `C
 | Método | Ruta | Token | Body | Respuestas |
 |---|---|---|---|---|
 | GET | `/api/movements` | Sí | — (ver filtros) | 200 `{ data, page, limit, total }` · 400 |
+| GET | `/api/movements/summary` | Sí | — (ver [resumen](#resumen-de-movimientos-del-panel)) | 200 · 400 · 401 |
 | GET | `/api/movements/:id` | Sí | — | 200 · 404 |
 | POST | `/api/movements` | Sí | `{ "bankAccountId": "<uuid>", "categoryId": "<uuid>", "type": "Expense", "amount": 85000, "date": "2026-10-15", "paymentMethod": "DebitCard", "description": "Mercado" }` | 201 · 400 |
 | PATCH | `/api/movements/:id` | Sí | `{ "amount": "90000", "description": "Mercado del mes" }` | 200 · 400 · 404 |
@@ -138,6 +167,29 @@ Cada cuenta se devuelve con su `balance` calculado. `accountType`: `Savings`, `C
 GET /api/movements?type=Expense&from=2026-10-01&to=2026-10-31&page=1&limit=20
 ```
 
+#### Resumen de movimientos del Panel
+
+`GET /api/movements/summary` devuelve los totales de **todo** el periodo (no de una página de la lista), solo del usuario del token.
+
+| Query | Obligatorio | Reglas |
+|---|---|---|
+| `from` | Sí | Fecha `AAAA-MM-DD`, inclusiva |
+| `to` | Sí | Fecha `AAAA-MM-DD`, inclusiva; `from` ≤ `to`; el periodo no puede superar **366 días** |
+| `currencyCode` | No | 3 letras; por defecto `COP` |
+
+```
+GET /api/movements/summary?from=2026-11-01&to=2026-11-30
+→ 200 { "from": "2026-11-01", "to": "2026-11-30", "currencyCode": "COP",
+        "totalIncome": "7000000.00", "totalExpense": "916224.00",
+        "balance": "6083776.00", "movementCount": 15 }
+```
+
+- Una sola moneda por respuesta: los movimientos en otra moneda no se suman (no hay tasas de cambio).
+- Los movimientos borrados no cuentan. Sin movimientos devuelve ceros y `movementCount: 0` (200).
+- `balance` = ingresos − egresos y puede ser negativo (`"-120000.00"`).
+- 400 `VALIDATION_ERROR`: falta `from` o `to`, fecha mal formada, `from` posterior a `to`, periodo mayor a 366 días o moneda inválida. 401 sin token.
+- Un `userId` en la query se ignora: el dueño sale siempre del token.
+
 **400 en movimientos:** monto ≤ 0, categoría que no es del sistema ni del usuario (o está borrada), cuenta ajena o borrada, moneda distinta a la de la cuenta, o falta la moneda cuando no hay cuenta. Los movimientos de una cuenta borrada siguen apareciendo en la lista, pero no se pueden crear nuevos en ella.
 
 ### Metas de ahorro
@@ -146,7 +198,7 @@ Cada meta se devuelve con su progreso: `accumulated`, `remaining` (texto con 2 d
 
 | Método | Ruta | Token | Body | Respuestas |
 |---|---|---|---|---|
-| GET | `/api/goals` | Sí | — | 200 |
+| GET | `/api/goals` | Sí | — (ver [paginación](#paginación-de-cuentas-categorías-y-metas)) | 200 (array) · 400 |
 | GET | `/api/goals/:id` | Sí | — | 200 · 404 |
 | POST | `/api/goals` | Sí | `{ "categoryId": "<uuid>", "name": "Viaje a Japón", "reason": "Travel", "targetAmount": 15000000, "currencyCode": "COP", "startDate": "2026-10-16", "endDate": "2027-12-31" }` | 201 · 400 · 409 |
 | PATCH | `/api/goals/:id` | Sí | `{ "targetAmount": "18000000", "status": "Completed" }` | 200 · 400 · 404 · 409 |
@@ -214,6 +266,16 @@ npx playwright show-report               # reporte HTML del último run
 
 3. En la colección, en *Authorization*, elige **Bearer Token** con el valor `{{token}}` y deja cada petición en *Inherit auth from parent*. Si no usas el script, copia el `token` de la respuesta del login y pégalo en esa variable.
 4. Usa las rutas sin repetir `/api`, por ejemplo `{{baseUrl}}/movements`.
+
+### Colección del resumen del Panel
+
+El archivo [`docs/postman/crezia-dashboard-summary.postman_collection.json`](docs/postman/crezia-dashboard-summary.postman_collection.json) solo trae las peticiones del resumen (`GET /movements/summary`) con sus pruebas (`pm.test`). No hay colección del resto de la API.
+
+1. En Postman: *Import* y elige el archivo.
+2. Crea un *environment* con `baseUrl` = `http://localhost:3000/api`, `email` y `password` (el usuario de prueba); `token` se llena sola. **No guardes credenciales reales en el archivo.**
+3. Ejecuta primero *Login* y luego las demás, o usa *Run collection*.
+
+Qué comprueban las pruebas: 200 con la estructura y el balance = ingresos − egresos (en centavos), un mes sin datos con ceros, y los casos 400 (periodo mayor a 366 días, `from` posterior a `to`, moneda inválida) y 401 (sin token).
 
 ## Limitaciones conocidas
 

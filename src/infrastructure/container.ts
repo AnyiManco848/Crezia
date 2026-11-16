@@ -20,6 +20,7 @@ import { UpdateGoalUseCase } from '../application/goals/UpdateGoalUseCase';
 import type { MovementUseCases } from '../application/movements';
 import { CreateMovementUseCase } from '../application/movements/CreateMovementUseCase';
 import { DeleteMovementUseCase } from '../application/movements/DeleteMovementUseCase';
+import { GetMovementSummaryUseCase } from '../application/movements/GetMovementSummaryUseCase';
 import { GetMovementUseCase } from '../application/movements/GetMovementUseCase';
 import { ListMovementsUseCase } from '../application/movements/ListMovementsUseCase';
 import { UpdateMovementUseCase } from '../application/movements/UpdateMovementUseCase';
@@ -73,6 +74,7 @@ export function createContainer(): Container {
     },
     movementUseCases: {
       list: new ListMovementsUseCase(movements),
+      summary: new GetMovementSummaryUseCase(movements),
       get: new GetMovementUseCase(movements),
       create: new CreateMovementUseCase(movements, categories, bankAccounts, currencies),
       update: new UpdateMovementUseCase(movements, categories, bankAccounts, currencies),

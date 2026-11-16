@@ -1,5 +1,12 @@
 import { z } from 'zod';
 import { DEFAULT_LIMIT, DEFAULT_PAGE, MAX_LIMIT } from '../../application/movements/ListMovementsUseCase';
+import {
+  DEFAULT_SUMMARY_CURRENCY,
+  INVALID_PERIOD_MESSAGE,
+  MAX_PERIOD_DAYS,
+  PERIOD_TOO_LONG_MESSAGE,
+  periodDays,
+} from '../../application/movements/GetMovementSummaryUseCase';
 import { INVALID_AMOUNT_MESSAGE } from '../../application/movements/movementAccess';
 import { MOVEMENT_TYPES, PAYMENT_METHODS } from '../../domain/entities/Movement';
 import { positiveAmountSchema } from './commonSchemas';
@@ -83,6 +90,24 @@ export const listMovementsQuerySchema = z
     path: ['to'],
   });
 
+// Both dates are required, so "this month" does not depend on the server's time zone: the client sends the range.
+// The currency defaults to COP; the use case repeats the default and the period checks.
+export const movementSummaryQuerySchema = z
+  .object({
+    from: date,
+    to: date,
+    currencyCode: currencyCode.default(DEFAULT_SUMMARY_CURRENCY),
+  })
+  .refine((query) => !query.from || !query.to || query.from <= query.to, {
+    error: INVALID_PERIOD_MESSAGE,
+    path: ['to'],
+  })
+  .refine((query) => !query.from || !query.to || query.from > query.to || periodDays(query.from, query.to) <= MAX_PERIOD_DAYS, {
+    error: PERIOD_TOO_LONG_MESSAGE,
+    path: ['to'],
+  });
+
 export type CreateMovementBody = z.infer<typeof createMovementBodySchema>;
+export type MovementSummaryQuery = z.infer<typeof movementSummaryQuerySchema>;
 export type UpdateMovementBody = z.infer<typeof updateMovementBodySchema>;
 export type ListMovementsQuery = z.infer<typeof listMovementsQuerySchema>;
