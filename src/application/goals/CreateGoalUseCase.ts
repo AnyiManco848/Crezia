@@ -44,9 +44,16 @@ export class CreateGoalUseCase {
     ensureDateRange(startDate, endDate);
     ensureEndDateNotPast(endDate, this.today());
     ensureReason(reason, reasonOther ?? null);
-    await ensureUsableCategory(this.categories, categoryId, userId);
-    await ensureActiveCurrency(this.currencies, currencyCode);
-    await ensureNoOtherActiveGoal(this.goals, userId, categoryId);
+    // The three checks are independent reads, so they run together; the first failure in this
+    // order is the one reported, exactly as if they ran one after another.
+    const checks = await Promise.allSettled([
+      ensureUsableCategory(this.categories, categoryId, userId),
+      ensureActiveCurrency(this.currencies, currencyCode),
+      ensureNoOtherActiveGoal(this.goals, userId, categoryId),
+    ]);
+    for (const check of checks) {
+      if (check.status === 'rejected') throw check.reason;
+    }
 
     const goal = await this.goals.create({
       userId,

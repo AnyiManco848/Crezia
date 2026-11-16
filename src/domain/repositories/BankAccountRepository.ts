@@ -1,5 +1,6 @@
 import type { AccountType, BankAccount } from '../entities/BankAccount';
 import type { MovementType } from '../entities/Movement';
+import type { Page, Pagination } from '../pagination';
 import type { SoftDeleteData } from './CategoryRepository';
 
 export type { SoftDeleteData };
@@ -32,7 +33,8 @@ export interface MovementTotal {
 
 // Every read ignores soft-deleted accounts.
 export interface BankAccountRepository {
-  listByUser(userId: string): Promise<BankAccount[]>;
+  // Ordered by bank name, creation date and id, so pages are stable.
+  listByUser(userId: string, pagination: Pagination): Promise<Page<BankAccount>>;
   // Any owner; access rules are applied by the use cases.
   findById(id: string): Promise<BankAccount | null>;
   create(data: CreateBankAccountData): Promise<BankAccount>;

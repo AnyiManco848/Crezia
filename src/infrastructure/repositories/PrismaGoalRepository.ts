@@ -8,6 +8,7 @@ import type {
   SoftDeleteData,
   UpdateGoalData,
 } from '../../domain/repositories/GoalRepository';
+import type { Page, Pagination } from '../../domain/pagination';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 import { softDeleteRow } from '../prisma/softDelete';
 
@@ -57,13 +58,20 @@ async function withActiveGoalConflict<T>(write: Promise<T>): Promise<T> {
 export class PrismaGoalRepository implements GoalRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async listByUser(userId: string): Promise<Goal[]> {
-    const rows = await this.prisma.goal.findMany({
-      where: { userId, deletedAt: null },
-      orderBy: [{ endDate: 'asc' }, { createdAt: 'asc' }],
-      select: goalSelect,
-    });
-    return rows.map(toGoal);
+  async listByUser(userId: string, { skip, take }: Pagination): Promise<Page<Goal>> {
+    const where = { userId, deletedAt: null };
+    const [rows, total] = await Promise.all([
+      this.prisma.goal.findMany({
+        where,
+        // id breaks ties so pages are stable.
+        orderBy: [{ endDate: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+        select: goalSelect,
+      }),
+      this.prisma.goal.count({ where }),
+    ]);
+    return { data: rows.map(toGoal), total };
   }
 
   async findById(id: string): Promise<Goal | null> {

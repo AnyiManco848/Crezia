@@ -1,14 +1,16 @@
 import type { Request, Response } from 'express';
 import type { BankAccountUseCases } from '../../application/bankAccounts';
 import type { CreateBankAccountBody, UpdateBankAccountBody } from '../schemas/bankAccountSchemas';
-import type { IdParams } from '../schemas/commonSchemas';
+import type { IdParams, PaginationQuery } from '../schemas/commonSchemas';
+import { sendPage } from '../http/paginationHeaders';
 
 // Every route runs behind the auth middleware, so req.user is always set.
 export class BankAccountController {
   constructor(private readonly useCases: BankAccountUseCases) {}
 
+  // req.query was replaced by the parsed query in the validate middleware.
   list = async (req: Request, res: Response) => {
-    res.json(await this.useCases.list.execute(req.user!.id));
+    sendPage(res, await this.useCases.list.execute(req.user!.id, req.query as unknown as PaginationQuery));
   };
 
   get = async (req: Request<IdParams>, res: Response) => {

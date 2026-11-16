@@ -6,6 +6,7 @@ import type {
   SoftDeleteData,
   UpdateBankAccountData,
 } from '../../domain/repositories/BankAccountRepository';
+import type { Page, Pagination } from '../../domain/pagination';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { softDeleteRow } from '../prisma/softDelete';
 
@@ -24,12 +25,20 @@ const bankAccountSelect = {
 export class PrismaBankAccountRepository implements BankAccountRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  listByUser(userId: string): Promise<BankAccount[]> {
-    return this.prisma.bankAccount.findMany({
-      where: { userId, deletedAt: null },
-      orderBy: [{ bankName: 'asc' }, { createdAt: 'asc' }],
-      select: bankAccountSelect,
-    });
+  async listByUser(userId: string, { skip, take }: Pagination): Promise<Page<BankAccount>> {
+    const where = { userId, deletedAt: null };
+    const [data, total] = await Promise.all([
+      this.prisma.bankAccount.findMany({
+        where,
+        // id breaks ties so pages are stable.
+        orderBy: [{ bankName: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+        select: bankAccountSelect,
+      }),
+      this.prisma.bankAccount.count({ where }),
+    ]);
+    return { data, total };
   }
 
   findById(id: string): Promise<BankAccount | null> {

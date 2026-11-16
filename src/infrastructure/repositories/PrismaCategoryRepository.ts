@@ -5,6 +5,7 @@ import type {
   SoftDeleteData,
   UpdateCategoryData,
 } from '../../domain/repositories/CategoryRepository';
+import type { Page, Pagination } from '../../domain/pagination';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { softDeleteRow } from '../prisma/softDelete';
 
@@ -21,13 +22,20 @@ const categorySelect = {
 export class PrismaCategoryRepository implements CategoryRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  listVisibleTo(userId: string): Promise<Category[]> {
-    return this.prisma.category.findMany({
-      where: { deletedAt: null, OR: [{ userId: null }, { userId }] },
-      // System categories first, then the user's, each group by name.
-      orderBy: [{ userId: { sort: 'asc', nulls: 'first' } }, { name: 'asc' }],
-      select: categorySelect,
-    });
+  async listVisibleTo(userId: string, { skip, take }: Pagination): Promise<Page<Category>> {
+    const where = { deletedAt: null, OR: [{ userId: null }, { userId }] };
+    const [data, total] = await Promise.all([
+      this.prisma.category.findMany({
+        where,
+        // System categories first, then the user's, each group by name; id breaks ties so pages are stable.
+        orderBy: [{ userId: { sort: 'asc', nulls: 'first' } }, { name: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+        select: categorySelect,
+      }),
+      this.prisma.category.count({ where }),
+    ]);
+    return { data, total };
   }
 
   findById(id: string): Promise<Category | null> {

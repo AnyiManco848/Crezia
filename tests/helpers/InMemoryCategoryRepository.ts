@@ -1,3 +1,4 @@
+import type { Page, Pagination } from '../../src/domain/pagination';
 import { randomUUID } from 'node:crypto';
 import type { Category } from '../../src/domain/entities/Category';
 import type {
@@ -36,8 +37,9 @@ export class InMemoryCategoryRepository implements CategoryRepository {
     return row;
   }
 
-  async listVisibleTo(userId: string): Promise<Category[]> {
-    return this.rows.filter((r) => !r.deletedAt && (r.userId === null || r.userId === userId)).map(toPublic);
+  async listVisibleTo(userId: string, { skip, take }: Pagination): Promise<Page<Category>> {
+    const all = this.rows.filter((r) => !r.deletedAt && (r.userId === null || r.userId === userId));
+    return { data: all.slice(skip, skip + take).map(toPublic), total: all.length };
   }
 
   async findById(id: string): Promise<Category | null> {

@@ -1,7 +1,8 @@
 import type { Request, Response } from 'express';
 import type { GoalUseCases } from '../../application/goals';
-import type { IdParams } from '../schemas/commonSchemas';
+import type { IdParams, PaginationQuery } from '../schemas/commonSchemas';
 import type { CreateGoalBody, UpdateGoalBody } from '../schemas/goalSchemas';
+import { sendPage } from '../http/paginationHeaders';
 
 export const GOAL_DELETED_MESSAGE = 'Meta eliminada con éxito';
 
@@ -9,8 +10,9 @@ export const GOAL_DELETED_MESSAGE = 'Meta eliminada con éxito';
 export class GoalController {
   constructor(private readonly useCases: GoalUseCases) {}
 
+  // req.query was replaced by the parsed query in the validate middleware.
   list = async (req: Request, res: Response) => {
-    res.json(await this.useCases.list.execute(req.user!.id));
+    sendPage(res, await this.useCases.list.execute(req.user!.id, req.query as unknown as PaginationQuery));
   };
 
   get = async (req: Request<IdParams>, res: Response) => {

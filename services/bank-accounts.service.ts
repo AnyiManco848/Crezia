@@ -17,3 +17,11 @@ export function deleteBankAccount(request: APIRequestContext, token: string, id:
 export function getBankAccount(request: APIRequestContext, token: string, id: string): Promise<APIResponse> {
   return request.get(`/api/bank-accounts/${id}`, { headers: authHeaders(token) });
 }
+
+export function listBankAccounts(
+  request: APIRequestContext,
+  token: string | undefined,
+  query: Record<string, string | number> = {},
+): Promise<APIResponse> {
+  return request.get('/api/bank-accounts', { headers: authHeaders(token), params: query });
+}

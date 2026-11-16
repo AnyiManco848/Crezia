@@ -17,3 +17,11 @@ export function deleteGoal(request: APIRequestContext, token: string, id: string
 export function getGoal(request: APIRequestContext, token: string, id: string): Promise<APIResponse> {
   return request.get(`/api/goals/${id}`, { headers: authHeaders(token) });
 }
+
+export function listGoals(
+  request: APIRequestContext,
+  token: string | undefined,
+  query: Record<string, string | number> = {},
+): Promise<APIResponse> {
+  return request.get('/api/goals', { headers: authHeaders(token), params: query });
+}

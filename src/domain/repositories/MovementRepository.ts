@@ -1,7 +1,8 @@
 import type { Movement, MovementSource, MovementType, PaymentMethod } from '../entities/Movement';
+import type { Page, Pagination } from '../pagination';
 import type { SoftDeleteData } from './CategoryRepository';
 
-export type { SoftDeleteData };
+export type { Pagination, SoftDeleteData };
 
 export interface CreateMovementData {
   userId: string;
@@ -39,16 +40,7 @@ export interface MovementFilters {
   to?: string;
 }
 
-export interface Pagination {
-  skip: number;
-  take: number;
-}
-
-export interface MovementPage {
-  data: Movement[];
-  // Matching rows before pagination.
-  total: number;
-}
+export type MovementPage = Page<Movement>;
 
 // Every read ignores soft-deleted movements (but not the ones of a deleted account).
 export interface MovementRepository {
