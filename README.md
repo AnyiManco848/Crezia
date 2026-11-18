@@ -252,6 +252,87 @@ npx playwright show-report               # reporte HTML del último run
 - Todo lo que crean lleva un nombre único con prefijo `PW` y se borra (soft delete) al terminar cada prueba o cada archivo.
 - Variables opcionales para usar otro usuario: `TEST_EMAIL` y `TEST_PASSWORD` (por ejemplo `$env:TEST_EMAIL="otro@crezia.com"`).
 
+## Frontend (React + Vite + TypeScript)
+
+Vive en `frontend/` con su propio `package.json`. Necesita Node 20 o superior y el backend corriendo. Las pantallas que aún no existen muestran "Esta sección aún no está disponible" (ver `docs/generated/plan-skills.md`).
+
+```
+frontend/src/
+├── domain/          Tipos alineados con el backend y lógica pura (iniciales del nombre). No importa React.
+├── application/     Validación de formularios con zod (mismas reglas y mensajes que el backend). No importa React.
+├── infrastructure/  Cliente HTTP único, adaptador de paginación, sesión (sessionStorage) y servicios por recurso.
+└── presentation/    React: rutas protegidas, tema claro/oscuro, layout, componentes y una carpeta por pantalla (features/).
+```
+
+### Instalar y correr
+
+```powershell
+cd frontend
+npm install
+Copy-Item .env.example .env      # y ajusta VITE_API_URL si la API no está en http://localhost:3000
+npm run dev                      # http://localhost:5173
+```
+
+| Variable | Para qué |
+|---|---|
+| `VITE_API_URL` | URL base de la API (por defecto `http://localhost:3000`). Vite expone al navegador todo lo que empiece por `VITE_`: **nunca pongas secretos ahí**. |
+
+### Backend y front juntos
+
+Dos terminales en PowerShell:
+
+```powershell
+# Terminal 1, en la raíz del repo: API en http://localhost:3000
+npm run dev
+
+# Terminal 2, en frontend/: front en http://localhost:5173
+npm run dev
+```
+
+La API acepta cualquier origen (CORS abierto) y expone las cabeceras `X-Total-Count`, `X-Page` y `X-Limit`, así que no hace falta proxy. Entra con el usuario del seed (ver "Usuario de prueba").
+
+### Comandos del front
+
+| Comando (en `frontend/`) | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo con recarga (HMR). |
+| `npm run build` | Chequeo de tipos (`tsc`) y build de producción en `frontend/dist/`. |
+| `npm run preview` | Sirve el build en `http://localhost:4173`. |
+| `npm run typecheck` / `npm run lint` | Tipos y ESLint. |
+| `npm test` | Pruebas con Vitest y Testing Library (no necesitan backend ni base de datos). |
+| `npm run e2e` | Pruebas de punta a punta con Playwright (ver abajo; **solo contra la base de pruebas**). |
+
+### Sesión y seguridad
+
+- El token JWT se guarda en `sessionStorage` (sobrevive a recargas, se borra al cerrar la pestaña). Cualquier respuesta 401 cierra la sesión y lleva al login. Al cerrar sesión se vacía la caché de datos.
+- `index.html` lleva una Content-Security-Policy (`<meta>`) que prohíbe scripts en línea y `eval`; solo permite la API de `VITE_API_URL` y Google Fonts. En desarrollo se relaja lo mínimo que Vite necesita (HMR). El script del tema es un archivo externo y síncrono (`public/theme-init.js`) para aplicar el tema antes de pintar sin necesitar `unsafe-inline`.
+- Una `<meta>` no puede fijar `frame-ancestors` ni las cabeceras de seguridad: al desplegar, configúralas en el servidor. El servidor también debe devolver `index.html` para cualquier ruta (el front usa rutas sin `#`).
+- El tema (claro, oscuro, sistema) se guarda en `localStorage` con la clave `crezia-theme`.
+
+### Pruebas E2E del front (base de datos de pruebas)
+
+Crean y borran datos, así que **nunca** se corren contra la base real. Usa un segundo proyecto de Supabase (o un Postgres local) y un archivo `.env.test` (ya está en `.gitignore`).
+
+```powershell
+# En la raíz del repo
+Copy-Item .env.test.example .env.test        # completa las CUATRO variables con la BD de PRUEBAS
+
+# 1. Migraciones y seed en la BD de pruebas
+node --env-file=.env.test node_modules/prisma/build/index.js migrate deploy
+npx tsx --env-file=.env.test prisma/seed.ts
+
+# 2. Backend contra la BD de pruebas (déjalo corriendo)
+npx tsx --env-file=.env.test src/server.ts
+
+# 3. En otra terminal, en frontend/
+$env:E2E_TEST_DB_CONFIRMED = "true"           # confirmas que el backend usa la BD de pruebas
+$env:E2E_EMAIL = "test@crezia.com"            # usuario del seed
+$env:E2E_PASSWORD = "Test123*"
+npm run e2e
+```
+
+Sin `E2E_TEST_DB_CONFIRMED=true`, sin credenciales o sin backend respondiendo, las pruebas se saltan con un aviso. Si falta alguna variable en `.env.test`, Node usaría el valor del `.env` real: por eso se piden las cuatro.
+
 ## Probar en Postman
 
 1. Crea un *environment* con las variables `baseUrl` = `http://localhost:3000/api` y `token` (vacía).

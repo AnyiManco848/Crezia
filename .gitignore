@@ -6,3 +6,6 @@ coverage/
 generated/
 playwright-report/
 test-results/
+
+# Frontend E2E tests: the test database credentials. Never commit.
+.env.test

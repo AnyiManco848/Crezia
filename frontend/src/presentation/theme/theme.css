@@ -1,0 +1,90 @@
+/* ============================================================
+   TOKENS SEMÁNTICOS. Los componentes solo usan estos nombres; los valores cambian por tema.
+   Identidad Crezia: turquesa, blanco, logo "C" con flecha, lema "Finanzas y Ahorro". Sin JAC.
+   --accent-solid es el turquesa de marca de los mockups (#00C9D1): con texto blanco da 2,04:1, así que
+   las acciones usan --primary (derivado) y el texto sobre el turquesa es oscuro.
+   Tema: sistema por defecto; data-theme="light|dark" en <html> lo fuerza (elección guardada del usuario).
+   ============================================================ */
+:root{
+  color-scheme:light;
+  --bg:#F4FBFC; --surface:#FFFFFF; --surface-2:#E6F9FA;
+  --text:#0B2B30; --text-2:#4A5F63;
+  --border:#CFE3E5; --border-strong:#5B8A90;
+  --primary:#087F8A; --primary-hover:#076F79; --on-primary:#FFFFFF; --link:#06707A;
+  --accent:#00C9D1; --accent-solid:#00C9D1; --on-accent:#0B2B30;
+  --success:#17622F; --success-bg:#E5F4EA;
+  --error:#B3261E; --error-bg:#FDECEA;
+  --warning:#8A5300; --warning-bg:#FFF4DC;
+  --info:#055A63; --info-bg:#E6F9FA;
+  --neutral-bg:#EEF3F4;
+  --danger-solid:#B3261E; --danger-solid-hover:#8F1D17; --on-danger:#FFFFFF;
+  --focus:#0B2B30; --focus-halo:#FFFFFF;
+  --track:#D3E8EB; --row-hover:#F1FAFB; --skeleton-1:#E3F1F3; --skeleton-2:#F1FAFB;
+  --disabled-bg:#EEF3F4; --disabled-text:#566A6D; --disabled-border:#B9CCCF;
+  --inverse-bg:#0B2B30; --inverse-text:#FFFFFF;
+  --overlay:rgba(11,43,48,.5); --shadow:0 1px 2px rgba(11,43,48,.08),0 6px 20px rgba(11,43,48,.06);
+  --show-light-logo:block; --show-dark-logo:none;
+}
+/* Oscuro: valores compartidos por la preferencia del sistema y por la elección manual (se mantienen iguales). */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#071A1D; --surface:#0E2A2F; --surface-2:#153A40;
+    --text:#E8F6F7; --text-2:#A9C4C7;
+    --border:#24474D; --border-strong:#6A9CA2;
+    --primary:#2CD3DB; --primary-hover:#5EE3E9; --on-primary:#031F23; --link:#5EE3E9;
+    --accent:#0D4D55; --accent-solid:transparent; --on-accent:#E8F6F7;
+    --success:#6EDC93; --success-bg:#12331F;
+    --error:#FF9B92; --error-bg:#3D1714;
+    --warning:#F6BD5A; --warning-bg:#3A2A08;
+    --info:#7FE6EB; --info-bg:#12424A;
+    --neutral-bg:#1B3A40;
+    --danger-solid:#FF8A80; --danger-solid-hover:#FFB0A9; --on-danger:#2B0B09;
+    --focus:#7FE6EB; --focus-halo:#071A1D;
+    --track:#24474D; --row-hover:#123137; --skeleton-1:#153A40; --skeleton-2:#1E4950;
+    --disabled-bg:#12292D; --disabled-text:#8CA9AD; --disabled-border:#2C4C52;
+    --inverse-bg:#E8F6F7; --inverse-text:#071A1D;
+    --overlay:rgba(0,0,0,.65); --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 20px rgba(0,0,0,.35);
+    --show-light-logo:none; --show-dark-logo:block;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#071A1D; --surface:#0E2A2F; --surface-2:#153A40;
+  --text:#E8F6F7; --text-2:#A9C4C7;
+  --border:#24474D; --border-strong:#6A9CA2;
+  --primary:#2CD3DB; --primary-hover:#5EE3E9; --on-primary:#031F23; --link:#5EE3E9;
+  --accent:#0D4D55; --accent-solid:transparent; --on-accent:#E8F6F7;
+  --success:#6EDC93; --success-bg:#12331F;
+  --error:#FF9B92; --error-bg:#3D1714;
+  --warning:#F6BD5A; --warning-bg:#3A2A08;
+  --info:#7FE6EB; --info-bg:#12424A;
+  --neutral-bg:#1B3A40;
+  --danger-solid:#FF8A80; --danger-solid-hover:#FFB0A9; --on-danger:#2B0B09;
+  --focus:#7FE6EB; --focus-halo:#071A1D;
+  --track:#24474D; --row-hover:#123137; --skeleton-1:#153A40; --skeleton-2:#1E4950;
+  --disabled-bg:#12292D; --disabled-text:#8CA9AD; --disabled-border:#2C4C52;
+  --inverse-bg:#E8F6F7; --inverse-text:#071A1D;
+  --overlay:rgba(0,0,0,.65); --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 20px rgba(0,0,0,.35);
+  --show-light-logo:none; --show-dark-logo:block;
+}
+:root{
+  --radius:12px; --radius-lg:20px;
+  --font:'Montserrat','Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+  --script:'Dancing Script','Segoe Script','Brush Script MT',cursive;
+  --sidebar:248px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);font-size:15px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+::placeholder{color:var(--text-2);opacity:1}
+a{color:var(--link)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;background:var(--inverse-bg);color:var(--inverse-text);padding:8px 12px;border-radius:8px;z-index:100}
+.skip:focus{top:8px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;box-shadow:0 0 0 5px var(--focus-halo)}
+/* El <main> recibe el foco por código al navegar (lectores de pantalla); no es interactivo, así que no lleva anillo. */
+[tabindex="-1"]:focus,[tabindex="-1"]:focus-visible{outline:none;box-shadow:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
