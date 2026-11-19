@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthShell } from '../components/AuthShell';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { AccountsPage } from '../features/accounts/AccountsPage';
 import { MovementsPage } from '../features/movements/MovementsPage';
 import { LoginPage } from '../features/login/LoginPage';
 import { PendingPage } from '../features/pending/PendingPage';
@@ -33,7 +34,7 @@ export function AppRoutes() {
           <Route index element={<Navigate to="/panel" replace />} />
           <Route path="/panel" element={<DashboardPage />} />
           <Route path="/movimientos" element={<MovementsPage />} />
-          <Route path="/cuentas" element={<PendingPage title="Cuentas" />} />
+          <Route path="/cuentas" element={<AccountsPage />} />
           <Route path="/metas" element={<PendingPage title="Metas" />} />
           <Route path="/categorias" element={<PendingPage title="Categorías" />} />
         </Route>

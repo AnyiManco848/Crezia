@@ -52,7 +52,8 @@ export interface Category {
   description: string | null;
 }
 
-export type AccountType = 'Savings' | 'Checking' | 'Credit' | 'Other';
+export const ACCOUNT_TYPES = ['Savings', 'Checking', 'Credit', 'Other'] as const;
+export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 // Bank account (GET /api/bank-accounts). The balance is computed by the API.
 export interface BankAccount {

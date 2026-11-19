@@ -265,7 +265,7 @@ frontend/src/
 └── presentation/    React: rutas protegidas, tema claro/oscuro, layout, componentes y una carpeta por pantalla (features/).
 ```
 
-**Pantallas hechas:** login, Panel (`GET /api/movements/summary`) y Movimientos (lista paginada con filtros, crear, editar y eliminar). Cuentas, Metas, Categorías, Registro, Encuesta y Mi perfil siguen pendientes.
+**Pantallas hechas:** login, Panel (`GET /api/movements/summary`) y Movimientos (lista paginada con filtros, crear, editar y eliminar) y Cuentas (tarjetas con saldo, crear, editar y eliminar). Metas, Categorías, Registro, Encuesta y Mi perfil siguen pendientes.
 
 **Montos:** el usuario puede escribir `85000`, `85000,50` o `85000.50`. Un punto seguido de exactamente 3 dígitos (`85.000`) se rechaza con un mensaje en lugar de adivinar si son miles o decimales. COP se muestra sin decimales (diseño aprobado), así que se redondea solo al mostrar.
 
