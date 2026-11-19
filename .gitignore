@@ -3,7 +3,7 @@ dist/
 .env
 .env.perf
 coverage/
-generated/
+/src/generated/
 playwright-report/
 test-results/
 

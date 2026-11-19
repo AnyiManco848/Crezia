@@ -42,9 +42,21 @@ function renderApp(initialPath: string) {
 
 const fetchMock = vi.fn<typeof fetch>();
 
+const EMPTY_SUMMARY = {
+  from: '2026-11-01',
+  to: '2026-11-30',
+  currencyCode: 'COP',
+  totalIncome: '0.00',
+  totalExpense: '0.00',
+  balance: '0.00',
+  movementCount: 0,
+};
+
 beforeEach(() => {
   sessionStore.clear();
   fetchMock.mockReset();
+  // The Panel asks for its summary as soon as it opens.
+  fetchMock.mockImplementation(async () => jsonResponse(EMPTY_SUMMARY));
   vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -156,7 +168,11 @@ describe('login screen', () => {
   });
 
   it('logs in, saves the session in sessionStorage and opens the Panel', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ token: session.token, user: session.user }));
+    fetchMock.mockImplementation(async (url) =>
+      String(url).endsWith('/api/auth/login')
+        ? jsonResponse({ token: session.token, user: session.user })
+        : jsonResponse(EMPTY_SUMMARY),
+    );
     const user = userEvent.setup();
     renderApp('/login');
 

@@ -296,3 +296,6 @@ dialog::backdrop{background:var(--overlay)}
   .btn.block-m{width:100%}
 }
 @media (max-width:480px){ .pager .controls{width:100%;justify-content:space-between} }
+
+/* KPI titles are real headings (h2) for screen readers; keep the prototype look. */
+h2.kpi-label{margin:0}
