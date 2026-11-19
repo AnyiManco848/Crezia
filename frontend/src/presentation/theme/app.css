@@ -305,3 +305,6 @@ h2.kpi-label{margin:0}
 .table-wrap .skeleton{padding:8px 18px}
 .list-busy{opacity:.6;transition:opacity .15s}
 .state .btn svg{width:18px;height:18px;color:inherit}
+.card-actions{display:flex;gap:6px;margin:0 -8px -8px}
+.pager-panel{margin-top:16px}
+.pager-panel .pager{border-top:0}

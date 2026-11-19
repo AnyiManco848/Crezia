@@ -22,6 +22,13 @@ export function formatPercent(value: number): string {
 
 const USD = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
 
+// Balance with its sign in text, never only in color: "− $ 250.000" for a negative one.
+export function formatSignedBalance(amount: string, currencyCode: string): string {
+  const negative = toCents(amount) < 0;
+  const absolute = negative ? amount.trim().replace(/^-/, '') : amount;
+  return `${negative ? '− ' : ''}${formatMoney(absolute, currencyCode)}`;
+}
+
 // Amount with its own currency: COP without decimals, USD with two. Another code falls back to "123,45 XYZ".
 export function formatMoney(amount: string | number, currencyCode: string): string {
   if (currencyCode === 'COP') return formatCop(amount);

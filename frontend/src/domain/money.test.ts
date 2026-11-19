@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCop, formatMoney, formatPercent, toCents } from './money';
+import { formatCop, formatMoney, formatPercent, formatSignedBalance, toCents } from './money';
 
 // Intl uses non-breaking spaces; compare with normal ones.
 const plain = (text: string) => text.split(String.fromCharCode(160)).join(' ').split(String.fromCharCode(8239)).join(' ');
@@ -40,6 +40,14 @@ describe('formatMoney', () => {
 
   it('falls back to the code for another currency', () => {
     expect(formatMoney('10.5', 'EUR')).toBe('10,50 EUR');
+  });
+});
+
+describe('formatSignedBalance', () => {
+  it('writes the minus sign for a negative balance and nothing for a positive one', () => {
+    expect(plain(formatSignedBalance('-250000.00', 'COP'))).toBe('− $ 250.000');
+    expect(plain(formatSignedBalance('1803000.00', 'COP'))).toBe('$ 1.803.000');
+    expect(plain(formatSignedBalance('0.00', 'COP'))).toBe('$ 0');
   });
 });
 

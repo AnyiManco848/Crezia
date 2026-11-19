@@ -1,4 +1,11 @@
-import type { MovementType, PaymentMethod } from './types';
+import type { AccountType, MovementType, PaymentMethod } from './types';
+
+export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  Savings: 'Ahorros',
+  Checking: 'Corriente',
+  Credit: 'Crédito',
+  Other: 'Otra',
+};
 
 export const TYPE_LABELS: Record<MovementType, string> = { Income: 'Ingreso', Expense: 'Gasto' };
 
