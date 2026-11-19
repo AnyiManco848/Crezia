@@ -19,3 +19,12 @@ export function formatCop(amount: string | number): string {
 export function formatPercent(value: number): string {
   return `${String(value).replace('.', ',')} %`;
 }
+
+const USD = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+
+// Amount with its own currency: COP without decimals, USD with two. Another code falls back to "123,45 XYZ".
+export function formatMoney(amount: string | number, currencyCode: string): string {
+  if (currencyCode === 'COP') return formatCop(amount);
+  if (currencyCode === 'USD') return USD.format(toCents(amount) / 100);
+  return `${(toCents(amount) / 100).toFixed(2).replace('.', ',')} ${currencyCode}`;
+}

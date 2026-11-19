@@ -22,7 +22,11 @@ describe('LoginUseCase', () => {
   let useCase: LoginUseCase;
 
   beforeEach(() => {
-    users = { findByEmailWithCredentials: vi.fn(async (email) => (email === storedUser.email ? storedUser : null)) };
+    users = {
+      findByEmailWithCredentials: vi.fn(async (email) => (email === storedUser.email ? storedUser : null)),
+      existsByEmailOrDocumentId: vi.fn(),
+      create: vi.fn(),
+    };
     hasher = {
       hash: vi.fn(),
       compare: vi.fn(async (plain, hash) => hash === `hashed-${plain}`),

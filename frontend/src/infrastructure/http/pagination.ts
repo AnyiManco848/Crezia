@@ -44,3 +44,17 @@ export function pageFromBody<T>(response: HttpResponse<BodyPage<T>>): Page<T> {
 export function pageCount(page: Pick<Page<unknown>, 'total' | 'limit'>): number {
   return Math.max(1, Math.ceil(page.total / Math.max(1, page.limit)));
 }
+
+const MAX_PAGES = 50;
+
+// Walks every page of a list (for selects, which need ALL the options). Stops when it has `total` items,
+// when a page comes back empty, or after MAX_PAGES (a safety net against a server that never ends).
+export async function fetchAllPages<T>(fetchPage: (page: number) => Promise<Page<T>>): Promise<T[]> {
+  const items: T[] = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const result = await fetchPage(page);
+    items.push(...result.items);
+    if (result.items.length === 0 || items.length >= result.total) break;
+  }
+  return items;
+}

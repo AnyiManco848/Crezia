@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCop, formatPercent, toCents } from './money';
+import { formatCop, formatMoney, formatPercent, toCents } from './money';
 
 // Intl uses non-breaking spaces; compare with normal ones.
 const plain = (text: string) => text.split(String.fromCharCode(160)).join(' ').split(String.fromCharCode(8239)).join(' ');
@@ -29,6 +29,17 @@ describe('formatCop', () => {
   it('rounds cents instead of cutting them', () => {
     expect(plain(formatCop('85000.50'))).toBe('$ 85.001');
     expect(plain(formatCop('85000.49'))).toBe('$ 85.000');
+  });
+});
+
+describe('formatMoney', () => {
+  it('formats COP without decimals and USD with two', () => {
+    expect(plain(formatMoney('85000.00', 'COP'))).toBe('$ 85.000');
+    expect(plain(formatMoney('1234.5', 'USD'))).toMatch(/1\.234,50/);
+  });
+
+  it('falls back to the code for another currency', () => {
+    expect(formatMoney('10.5', 'EUR')).toBe('10,50 EUR');
   });
 });
 

@@ -54,3 +54,22 @@ export class ConflictError extends DomainError {
     super(message);
   }
 }
+
+// One message for a repeated email, a repeated document id or both, so the answer does not say which
+// of them exists (see docs/generated/specs/registro/registro-usuario.md, D-1).
+export const REGISTRATION_CONFLICT_MESSAGE =
+  'No pudimos crear la cuenta con esos datos. Revisa la información o inicia sesión si ya tienes una cuenta.';
+
+export class UserAlreadyExistsError extends ConflictError {
+  constructor() {
+    super(REGISTRATION_CONFLICT_MESSAGE);
+  }
+}
+
+export class TooManyRequestsError extends DomainError {
+  readonly code = 'TOO_MANY_REQUESTS';
+
+  constructor(message = 'Demasiados intentos. Inténtalo de nuevo en unos minutos.') {
+    super(message);
+  }
+}

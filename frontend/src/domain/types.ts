@@ -25,6 +25,45 @@ export interface MovementSummary {
   movementCount: number;
 }
 
+export const MOVEMENT_TYPES = ['Income', 'Expense'] as const;
+export const PAYMENT_METHODS = ['Cash', 'Transfer', 'CreditCard', 'DebitCard', 'Other'] as const;
+export type MovementType = (typeof MOVEMENT_TYPES)[number];
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+// A movement as the API lists it (GET /api/movements). amount is always > 0 (a decimal string, "85000.00");
+// the type says whether it adds or subtracts. date is a calendar date "YYYY-MM-DD" without time zone.
+export interface Movement {
+  id: string;
+  bankAccountId: string | null;
+  categoryId: string;
+  type: MovementType;
+  amount: string;
+  currencyCode: string;
+  date: string;
+  paymentMethod: PaymentMethod;
+  description: string | null;
+}
+
+// Category (GET /api/categories). userId is null for the system ones (read-only).
+export interface Category {
+  id: string;
+  userId: string | null;
+  name: string;
+  description: string | null;
+}
+
+export type AccountType = 'Savings' | 'Checking' | 'Credit' | 'Other';
+
+// Bank account (GET /api/bank-accounts). The balance is computed by the API.
+export interface BankAccount {
+  id: string;
+  bankName: string;
+  accountAlias: string | null;
+  accountType: AccountType;
+  currencyCode: string;
+  balance?: string;
+}
+
 export interface Session {
   token: string;
   user: User;
