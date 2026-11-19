@@ -61,7 +61,7 @@ npm run db:seed      # prisma db seed: carga los datos de prueba
 |---|---|
 | `npm run dev` | Servidor en modo desarrollo con recarga automática (`tsx watch`). |
 | `npm test` | Pruebas unitarias con Vitest (no necesitan base de datos). |
-| `npm run test:api` | Pruebas de API con Playwright contra el servidor real (ver abajo). |
+| `npm run test:api` | Pruebas de API con Playwright contra el servidor real (ver abajo). Las que **crean datos** (registro) usan `npm run test:api:test`, solo con la base de pruebas. |
 | `npm run build` | `prisma generate` + compilación de TypeScript a `dist/`. |
 | `npm start` | Corre la versión compilada (`dist/server.js`). |
 
@@ -122,6 +122,7 @@ GET /api/bank-accounts?page=2&limit=20
 
 | Método | Ruta | Token | Body | Respuestas |
 |---|---|---|---|---|
+| POST | `/api/auth/register` | No | `{ name, documentId, birthDate, email, password, phone?, preferredCurrencyCode? }` | 201 `{ token, user }` · 400 · 409 mensaje genérico · 429 `Retry-After` (10 intentos por IP cada 15 min) |
 | POST | `/api/auth/login` | No | `{ "email": "test@crezia.com", "password": "Test123*" }` | 200 `{ token, user }` · 400 · 401 credenciales incorrectas |
 
 ### Categorías
@@ -264,6 +265,10 @@ frontend/src/
 └── presentation/    React: rutas protegidas, tema claro/oscuro, layout, componentes y una carpeta por pantalla (features/).
 ```
 
+**Pantallas hechas:** login, Panel (`GET /api/movements/summary`) y Movimientos (lista paginada con filtros, crear, editar y eliminar). Cuentas, Metas, Categorías, Registro, Encuesta y Mi perfil siguen pendientes.
+
+**Montos:** el usuario puede escribir `85000`, `85000,50` o `85000.50`. Un punto seguido de exactamente 3 dígitos (`85.000`) se rechaza con un mensaje en lugar de adivinar si son miles o decimales. COP se muestra sin decimales (diseño aprobado), así que se redondea solo al mostrar.
+
 ### Instalar y correr
 
 ```powershell
@@ -314,17 +319,15 @@ La API acepta cualquier origen (CORS abierto) y expone las cabeceras `X-Total-Co
 Crean y borran datos, así que **nunca** se corren contra la base real. Usa un segundo proyecto de Supabase (o un Postgres local) y un archivo `.env.test` (ya está en `.gitignore`).
 
 ```powershell
-# En la raíz del repo
-Copy-Item .env.test.example .env.test        # completa las CUATRO variables con la BD de PRUEBAS
+# En la raíz del repo (pasos completos y protecciones: docs/generated/test-database.md)
+Copy-Item .env.test.example .env.test        # completa las CUATRO variables con la BD de PRUEBAS y deja TEST_MODE=true
+npm run db:test:check                         # comprueba que NO es la base real
+npm run db:test:migrate                       # migrate deploy en la BD de pruebas
+npm run db:test:seed                          # monedas, categorías y test@crezia.com
 
-# 1. Migraciones y seed en la BD de pruebas
-node --env-file=.env.test node_modules/prisma/build/index.js migrate deploy
-npx tsx --env-file=.env.test prisma/seed.ts
+npm run dev:test                              # backend contra la BD de pruebas (déjalo corriendo)
 
-# 2. Backend contra la BD de pruebas (déjalo corriendo)
-npx tsx --env-file=.env.test src/server.ts
-
-# 3. En otra terminal, en frontend/
+# En otra terminal, en frontend/
 $env:E2E_TEST_DB_CONFIRMED = "true"           # confirmas que el backend usa la BD de pruebas
 $env:E2E_EMAIL = "test@crezia.com"            # usuario del seed
 $env:E2E_PASSWORD = "Test123*"

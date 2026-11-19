@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { HttpResponse } from './client';
-import { pageCount, pageFromBody, pageFromHeaders, type BodyPage } from './pagination';
+import { fetchAllPages, pageCount, pageFromBody, pageFromHeaders, type BodyPage, type Page } from './pagination';
 
 function response<T>(data: T, headers: Record<string, string> = {}): HttpResponse<T> {
   return { data, status: 200, headers: new Headers(headers) };
@@ -53,5 +53,37 @@ describe('pageCount', () => {
     expect(pageCount({ total: 60, limit: 20 })).toBe(3);
     expect(pageCount({ total: 0, limit: 20 })).toBe(1);
     expect(pageCount({ total: 5, limit: 0 })).toBe(5);
+  });
+});
+
+describe('fetchAllPages', () => {
+  const page = (items: number[], total: number): Page<number> => ({ items, total, page: 1, limit: items.length });
+
+  it('collects every page until it reaches the total', async () => {
+    const pages = [page([1, 2], 5), page([3, 4], 5), page([5], 5)];
+    const fetchPage = vi.fn(async (n: number) => pages[n - 1]!);
+
+    expect(await fetchAllPages(fetchPage)).toEqual([1, 2, 3, 4, 5]);
+    expect(fetchPage).toHaveBeenCalledTimes(3);
+  });
+
+  it('makes a single request when everything fits in the first page', async () => {
+    const fetchPage = vi.fn(async () => page([1, 2], 2));
+
+    expect(await fetchAllPages(fetchPage)).toEqual([1, 2]);
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops on an empty page even if the total says there is more', async () => {
+    const fetchPage = vi.fn(async (n: number) => (n === 1 ? page([1], 9) : page([], 9)));
+
+    expect(await fetchAllPages(fetchPage)).toEqual([1]);
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up after 50 pages', async () => {
+    const fetchPage = vi.fn(async () => page([1], 10_000));
+
+    expect(await fetchAllPages(fetchPage)).toHaveLength(50);
   });
 });

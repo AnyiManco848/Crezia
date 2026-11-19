@@ -152,7 +152,7 @@ td{padding:14px 18px;border-top:1px solid var(--border);vertical-align:middle}
 tbody tr:hover{background:var(--row-hover)}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 td.actions,th.actions{width:1%;white-space:nowrap;text-align:right}
-.amount{font-weight:700}
+.amount{font-weight:700;white-space:nowrap}
 .amount.income{color:var(--success)}
 .amount.expense{color:var(--error)}
 .cell-title{font-weight:600}
@@ -299,3 +299,9 @@ dialog::backdrop{background:var(--overlay)}
 
 /* KPI titles are real headings (h2) for screen readers; keep the prototype look. */
 h2.kpi-label{margin:0}
+
+/* Movimientos */
+.field .label-text{font-weight:600;font-size:14px}
+.table-wrap .skeleton{padding:8px 18px}
+.list-busy{opacity:.6;transition:opacity .15s}
+.state .btn svg{width:18px;height:18px;color:inherit}

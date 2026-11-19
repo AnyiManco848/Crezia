@@ -1,0 +1,305 @@
+{
+  "info": {
+    "name": "Crezia - Registro de usuario",
+    "description": "POST /auth/register (AUTH-REG-001) con sus pruebas. Variables de la coleccion: baseUrl (http://localhost:3000/api). USALA SOLO CONTRA LA BASE DE PRUEBAS: cada ejecucion CREA usuarios (correo @e2e.crezia.test, identificacion E2E...). Levanta el backend con npm run dev:test (ver docs/generated/test-database.md). El limite es de 10 intentos por IP cada 15 minutos salvo que .env.test lo suba con REGISTER_RATE_LIMIT_MAX. No guardes credenciales reales.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "newEmail",
+      "value": ""
+    },
+    {
+      "key": "newDocument",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Registro exitoso (201)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Datos unicos por ejecucion. El correo y la identificacion llevan la marca e2e para que se puedan limpiar en la BD de PRUEBAS.",
+              "const s = Math.random().toString(36).slice(2, 10);",
+              "pm.collectionVariables.set('newEmail', 'postman-' + s + '@e2e.crezia.test');",
+              "pm.collectionVariables.set('newDocument', 'E2E' + s);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 201 con token y user', function () {",
+              "  pm.response.to.have.status(201);",
+              "  const b = pm.response.json();",
+              "  pm.expect(b.token.split('.')).to.have.length(3);",
+              "  pm.expect(b.user).to.include({ email: pm.collectionVariables.get('newEmail'), role: 'User', preferredCurrencyCode: 'COP' });",
+              "});",
+              "pm.test('Nunca devuelve datos de la contrasena', function () {",
+              "  pm.expect(pm.response.text()).to.not.match(/passwordHash|password_hash|$2[aby]$/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Prueba\",\n  \"documentId\": \"{{newDocument}}\",\n  \"birthDate\": \"1995-03-10\",\n  \"email\": \"{{newEmail}}\",\n  \"password\": \"Clave1234\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Mismo correo repetido (409 generico)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('409 con el mensaje generico', function () {",
+              "  pm.response.to.have.status(409);",
+              "  pm.expect(pm.response.json()).to.eql({ error: { code: 'CONFLICT', message: \"No pudimos crear la cuenta con esos datos. Revisa la información o inicia sesión si ya tienes una cuenta.\" } });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Prueba\",\n  \"documentId\": \"E2E{{$randomInt}}{{$timestamp}}\",\n  \"birthDate\": \"1995-03-10\",\n  \"email\": \"{{newEmail}}\",\n  \"password\": \"Clave1234\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Misma identificacion repetida (409 generico, mismo mensaje)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('409 con el MISMO mensaje generico', function () {",
+              "  pm.response.to.have.status(409);",
+              "  pm.expect(pm.response.json().error.message).to.eql(\"No pudimos crear la cuenta con esos datos. Revisa la información o inicia sesión si ya tienes una cuenta.\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Prueba\",\n  \"documentId\": \"{{newDocument}}\",\n  \"birthDate\": \"1995-03-10\",\n  \"email\": \"otro-{{$timestamp}}@e2e.crezia.test\",\n  \"password\": \"Clave1234\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Menor de edad (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 con mensaje en espanol', function () {",
+              "  pm.response.to.have.status(400);",
+              "  pm.expect(pm.response.text()).to.include('Debes tener 18 años o más');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Prueba\",\n  \"documentId\": \"E2E{{$timestamp}}\",\n  \"birthDate\": \"2999-01-01\",\n  \"email\": \"menor-{{$timestamp}}@e2e.crezia.test\",\n  \"password\": \"Clave1234\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Contrasena debil y correo invalido (400 por campo)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 con detalles por campo', function () {",
+              "  pm.response.to.have.status(400);",
+              "  const paths = pm.response.json().error.details.map(function (d) { return d.path; });",
+              "  pm.expect(paths).to.include.members(['body.email', 'body.password']);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Prueba\",\n  \"documentId\": \"E2E{{$timestamp}}\",\n  \"birthDate\": \"1995-03-10\",\n  \"email\": \"no-es-correo\",\n  \"password\": \"123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Intento de asignar rol Admin (se ignora)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Crea la cuenta pero con rol User', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(pm.response.json().user.role).to.eql('User');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Prueba\",\n  \"documentId\": \"E2E{{$timestamp}}x\",\n  \"birthDate\": \"1995-03-10\",\n  \"email\": \"rol-{{$timestamp}}@e2e.crezia.test\",\n  \"password\": \"Clave1234\",\n  \"role\": \"Admin\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

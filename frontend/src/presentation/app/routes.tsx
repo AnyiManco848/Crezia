@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthShell } from '../components/AuthShell';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { MovementsPage } from '../features/movements/MovementsPage';
 import { LoginPage } from '../features/login/LoginPage';
 import { PendingPage } from '../features/pending/PendingPage';
 import { RegisterPendingPage } from '../features/pending/RegisterPendingPage';
@@ -31,7 +32,7 @@ export function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/panel" replace />} />
           <Route path="/panel" element={<DashboardPage />} />
-          <Route path="/movimientos" element={<PendingPage title="Movimientos" />} />
+          <Route path="/movimientos" element={<MovementsPage />} />
           <Route path="/cuentas" element={<PendingPage title="Cuentas" />} />
           <Route path="/metas" element={<PendingPage title="Metas" />} />
           <Route path="/categorias" element={<PendingPage title="Categorías" />} />

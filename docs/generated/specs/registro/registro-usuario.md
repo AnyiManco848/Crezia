@@ -4,7 +4,7 @@
 |---|---|
 | Identificador | `AUTH-REG-001` (interno de este documento; no hay historia ni ticket asociado, no se inventa uno externo) |
 | Rama propuesta | `feature/auth-register` (sale de `develop`) |
-| Estado | **Propuesta, esperando tu aprobación. No se ha implementado nada.** |
+| Estado | **Aprobada (2026-11-18), con D-4 condicionado.** Implementada en `feature/auth-register`; la parte del login de D-4 sigue **pendiente de tu verificación en Supabase**. Pruebas de API escritas, no ejecutadas. |
 | Origen | Decisión de la usuaria: registro sin confirmación de correo, edad ≥ 18, moneda por defecto COP, hash de contraseña, mensajes que no revelen si un correo existe, límite de intentos si corresponde. Sin ese endpoint solo entran usuarios sembrados. |
 | Skill | spec-driven-development (modos Analyze, Specify, Design y Plan; sin Implement) |
 | Sistema de especificaciones | No hay `specs/` ni OpenSpec: se usa este documento, junto a `dashboard-summary.md` y `perfil/`. |
@@ -166,7 +166,7 @@ Cuando se haga: columna `email_verified_at`, envío de correo, y el contrato cam
 | T7 | Documentación: `README.md` (tabla de endpoints), `GUIA_DEL_CODIGO.md`, colección de Postman | T5 | Revisada |
 | T8 | Revisión de seguridad (`application-security-review`) | T5 | Informe enlazado |
 
-Estado de todas: **Pendiente**. Nada verificado todavía.
+Estado: T1 a T5 implementadas y verificadas con Vitest (276 pruebas, `tsc` limpio); T2 hecha salvo el login (D-4 pendiente); T6 (Playwright) y la colección de Postman **escritas, no ejecutadas**; T7 hecha salvo `GUIA_DEL_CODIGO.md`; T8 (revisión de seguridad) **pendiente**.
 
 ## 14. Decisiones que necesito de ti
 
@@ -182,6 +182,52 @@ Estado de todas: **Pendiente**. Nada verificado todavía.
 | **D-8** | Fila vacía en `financial_profile` al registrar. | **No** (ver §8) |
 | **D-9** | Límite de intentos del **login** (hallazgo). | Hacerlo en otra rama, con el mismo limitador |
 
+## 14b. Respuestas aprobadas (2026-11-18)
+
+| Decisión | Resultado |
+|---|---|
+| D-1, D-2, D-3, D-6, D-7, D-8 | Como recomendaba el documento. |
+| D-4 | Registro en minúsculas **hecho**. Login en minúsculas **pendiente** (ver abajo). |
+| D-5 | `express-rate-limit`, 10 intentos por IP cada 15 minutos. `trust proxy` apagado por defecto, controlado por la variable `TRUST_PROXY` (ver abajo). |
+| D-9 | Límite de intentos del login: **otra rama** (anotado en `plan-skills.md`). |
+
+### D-4 pendiente: correo en minúsculas en el login
+
+**Estado actual (mientras no confirmes):** el registro guarda el correo en minúsculas, pero el login sigue buscando el correo **tal cual lo escribe la persona**. Consecuencia concreta hoy: quien se registre escribiendo `Ana@Mail.com` queda guardada como `ana@mail.com` y, si inicia sesión escribiendo `Ana@Mail.com`, **no entra** hasta que se haga el cambio del login. El front de registro (cuando se haga) debe enviar el correo en minúsculas o esperar a este cambio.
+
+**Qué haría falta si SÍ hay correos con mayúsculas en la base** (ejecútalo tú en el SQL Editor, primero solo las consultas de revisión):
+
+```sql
+-- 1. Correos con mayúsculas (usuarios no borrados)
+SELECT id, email FROM users WHERE deleted_at IS NULL AND email <> lower(email);
+
+-- 2. Conflictos: dos cuentas que solo difieren por mayúsculas (el índice único actual las permite).
+--    Si devuelve filas, hay que decidir a mano cuál conservar ANTES de normalizar.
+SELECT lower(email) AS email, count(*) FROM users WHERE deleted_at IS NULL GROUP BY 1 HAVING count(*) > 1;
+```
+
+Si la consulta 2 no devuelve filas, la migración de datos es una sola sentencia, que iría en una **migración de Prisma** (la base se maneja solo con migraciones):
+
+```sql
+UPDATE users SET email = lower(email) WHERE email <> lower(email);
+```
+
+Después, opcionalmente, un índice único sobre `lower(email)` (parcial, `deleted_at IS NULL`) para que la base impida duplicados por mayúsculas incluso si otro código la escribe. Los usuarios con mayúsculas dejan de poder entrar con su correo escrito así hasta que el login normalice (o hasta que se haga la migración): por eso el cambio del login y la migración de datos deben salir **juntos**. No se hace nada de esto hasta que confirmes el resultado de las consultas.
+
+### `trust proxy` al desplegar (D-5)
+
+La API usa `req.ip` para el límite. Sin proxy delante (hoy, en local) el valor correcto es **ninguno**: `TRUST_PROXY` vacío o `false`. Al desplegar detrás de proxies:
+
+| Situación | `TRUST_PROXY` |
+|---|---|
+| Local, sin proxy | vacío / `false` (por defecto) |
+| Un proxy o balanceador delante (la mayoría de PaaS: Render, Railway, Fly, Heroku) | `1` |
+| Cadena conocida (CDN + balanceador) | el número de saltos, p. ej. `2` |
+| Proxy en una red conocida | lista de IP/CIDR, p. ej. `loopback, 10.0.0.0/8` |
+| `true` | **Se rechaza al arrancar**: confiaría en cualquier `X-Forwarded-For` y un atacante cambiaría su IP en cada intento para saltarse el límite |
+
+Con un valor menor al real, todos los clientes parecen tener la IP del proxy y **se bloquean entre sí** (un solo contador para todos). Con un valor mayor, un cliente puede falsificar su IP. Comprueba el valor desplegado imprimiendo `req.ip` en un entorno de prueba antes de fiarte.
+
 ## 15. Verificación y estado
 
-Solo se revisó el código y las migraciones (inspección). **No se ejecutó nada, no se implementó nada, no se tocó la base.** Estado de la especificación: **propuesta pendiente de aprobación**; implementación bloqueada hasta que respondas D-1 a D-9 (al menos D-1 a D-6).
+Ver el resumen de verificación entregado con la implementación (Vitest ejecutado; Playwright y Postman escritos, **no ejecutados**).

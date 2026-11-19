@@ -101,7 +101,7 @@ describe('Panel: with data', () => {
   it('shows the period range in the subtitle', async () => {
     renderPanel();
 
-    expect(await screen.findByText(/Resumen de 01 de nov de 2026 a 30 de nov de 2026 · 12 movimientos\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Resumen de 01 nov 2026 a 30 nov 2026 · 12 movimientos\./)).toBeInTheDocument();
   });
 });
 

@@ -47,6 +47,10 @@ const PATHS = {
   eyeOff: (
     <path d="m3 3 18 18M10.6 6.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3 3.6M6.3 6.8C3.7 8.6 2 12 2 12s4 7 10 7c1.5 0 2.9-.4 4.1-1M9.9 9.9a3 3 0 0 0 4.2 4.2" />
   ),
+  plus: <path d="M12 5v14M5 12h14" />,
+  edit: <path d="M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4" />,
+  trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />,
+  close: <path d="M6 6l12 12M18 6 6 18" />,
   warn: <path d="M12 3 2 20h20L12 3ZM12 10v4M12 17h.01" />,
   check: (
     <>

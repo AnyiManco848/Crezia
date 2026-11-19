@@ -1,4 +1,5 @@
 import { LoginUseCase } from '../application/auth/LoginUseCase';
+import { RegisterUserUseCase } from '../application/auth/RegisterUserUseCase';
 import type { BankAccountUseCases } from '../application/bankAccounts';
 import { CreateBankAccountUseCase } from '../application/bankAccounts/CreateBankAccountUseCase';
 import { DeleteBankAccountUseCase } from '../application/bankAccounts/DeleteBankAccountUseCase';
@@ -39,6 +40,7 @@ import { JwtTokenService } from './security/JwtTokenService';
 export interface Container {
   tokenService: TokenService;
   loginUseCase: LoginUseCase;
+  registerUserUseCase: RegisterUserUseCase;
   categoryUseCases: CategoryUseCases;
   bankAccountUseCases: BankAccountUseCases;
   movementUseCases: MovementUseCases;
@@ -58,6 +60,7 @@ export function createContainer(): Container {
   return {
     tokenService,
     loginUseCase: new LoginUseCase(users, new BcryptPasswordHasher(), tokenService),
+    registerUserUseCase: new RegisterUserUseCase(users, currencies, new BcryptPasswordHasher(), tokenService),
     categoryUseCases: {
       list: new ListCategoriesUseCase(categories),
       get: new GetCategoryUseCase(categories),

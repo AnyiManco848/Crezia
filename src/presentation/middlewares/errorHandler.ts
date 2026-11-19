@@ -4,12 +4,14 @@ import {
   DomainError,
   ForbiddenError,
   NotFoundError,
+  TooManyRequestsError,
   UnauthorizedError,
   ValidationError,
 } from '../../domain/errors';
 
 function statusFor(err: DomainError): number {
   if (err instanceof ValidationError) return 400;
+  if (err instanceof TooManyRequestsError) return 429;
   if (err instanceof UnauthorizedError) return 401;
   if (err instanceof ForbiddenError) return 403;
   if (err instanceof NotFoundError) return 404;
