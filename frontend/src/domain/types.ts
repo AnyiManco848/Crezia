@@ -13,6 +13,18 @@ export interface User {
   preferredCurrencyCode: string;
 }
 
+// GET /api/movements/summary. Amounts are decimal strings with two places; balance is negative when
+// expenses win. Only movements in `currencyCode` are counted (no exchange rates).
+export interface MovementSummary {
+  from: string;
+  to: string;
+  currencyCode: string;
+  totalIncome: string;
+  totalExpense: string;
+  balance: string;
+  movementCount: number;
+}
+
 export interface Session {
   token: string;
   user: User;
