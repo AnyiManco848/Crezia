@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate } from './dates';
+import { formatDate, isRealIsoDate, todayIsoDate } from './dates';
 
 describe('formatDate', () => {
   it('formats a calendar date as "DD mon YYYY" without "de"', () => {
@@ -10,5 +10,23 @@ describe('formatDate', () => {
 
   it('does not shift the day with the time zone', () => {
     expect(formatDate('2026-12-31')).toBe('31 dic 2026');
+  });
+});
+
+describe('todayIsoDate', () => {
+  it('uses the local calendar date with zero padding', () => {
+    expect(todayIsoDate(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
+    expect(todayIsoDate(new Date(2026, 10, 22, 0, 1))).toBe('2026-11-22');
+  });
+});
+
+describe('isRealIsoDate', () => {
+  it('accepts real dates and rejects impossible or badly formatted ones', () => {
+    expect(isRealIsoDate('2028-02-29')).toBe(true);
+    expect(isRealIsoDate('2026-02-29')).toBe(false);
+    expect(isRealIsoDate('2026-02-30')).toBe(false);
+    expect(isRealIsoDate('2026-13-01')).toBe(false);
+    expect(isRealIsoDate('26-1-1')).toBe(false);
+    expect(isRealIsoDate('')).toBe(false);
   });
 });

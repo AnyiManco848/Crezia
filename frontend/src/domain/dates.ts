@@ -9,3 +9,16 @@ export function formatDate(isoDate: string): string {
   if (!year || !day || !name) return isoDate;
   return `${day} ${name} ${year}`;
 }
+
+// Today's calendar date "YYYY-MM-DD" in the person's own time zone (not UTC), like the backend's todayIsoDate.
+export function todayIsoDate(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+// True for a real calendar date written as "YYYY-MM-DD" ("2026-02-30" is not).
+export function isRealIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+}
