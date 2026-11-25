@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { E2E, expect, login, test } from './support';
 
 // Runs against the TEST database (see README and docs/generated/test-database.md). These tests CREATE users.
@@ -11,7 +12,8 @@ import { E2E, expect, login, test } from './support';
 // The 429 case is NOT here: the test backend runs with a high limit (REGISTER_RATE_LIMIT_MAX=1000) so these tests do
 // not hit it. The API suite has it (tests/api/auth/register.spec.ts) and the screen is covered by Vitest.
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+// The front is an ES module ("type": "module"): __dirname does not exist, so the folder comes from import.meta.url.
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const GENERIC_CONFLICT = 'No pudimos crear la cuenta con esos datos. Revisa la información o inicia sesión si ya tienes una cuenta.';
 
 function cleanE2eUsers() {

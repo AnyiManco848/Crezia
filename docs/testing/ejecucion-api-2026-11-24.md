@@ -47,3 +47,40 @@ Las fechas antiguas (2001) **no** eran el problema: con la moneda enviada se cre
 - `tests/api/movements/movements-summary.spec.ts`: helper `add` con COP por defecto y mensaje de error con el cuerpo de la respuesta.
 - `scripts/test-api-ratelimit.cjs` y script `test:api:ratelimit` en `package.json`.
 - Sin cambios en `birthDateForAge`, en migraciones ni en `docs/db/crezia_schema_v2.sql`.
+
+---
+
+## Actualización 2026-11-25 (resultado más reciente)
+
+- **Fecha:** 2026-11-25, ejecuciones entre las 10:58 y las 11:35 (hora de Bogotá, UTC−5).
+- **Base usada:** `crezia_test` (nunca la real). Antes de cada ejecución, `npm run db:test:check` confirmó que `.env.test` no apunta a la base real. `E2E_TEST_DB_CONFIRMED=true` se puso solo en línea, para cada comando.
+
+### Totales
+
+| Suite | Total | Pasan | Fallan | Omitidas |
+|---|---:|---:|---:|---:|
+| API (`npm run test:api:test`, `tests/api/**`) | 84 | **82** | **0** | **2** |
+| Vitest del backend (`npx vitest run`) | 335 | 335 | 0 | 0 |
+| Vitest del front (`frontend`, `npx vitest run`) | 315 | 315 | 0 | 0 |
+
+- Las **2 omitidas** son solo los dos 429 que se corren aparte (se omiten con `test.skip` si no se define el límite bajo): `register.spec.ts` «rate limit» (`npm run test:api:ratelimit`) y `login-ratelimit.spec.ts` (`npm run test:api:ratelimit:login`). El del login se corrió aparte el 2026-11-25 y pasa.
+- **Prueba del día límite de DEF-002** (`register.spec.ts:106`, «rejects a person under 18 and accepts one who turns 18 today»): **corrió completa y pasó** el 25 de noviembre a las 10:58 y de nuevo a las 11:05 hora de Bogotá, es decir **fuera de la ventana horaria** del defecto (19:00–24:00). Confirma que el defecto depende de la zona horaria de la base.
+- Respecto del 2026-11-24 (79 pruebas) hay 5 más: `login-security.spec.ts` (3), `deleted-user-token.spec.ts` (1) y `login-ratelimit.spec.ts` (1, omitida).
+- Los E2E del front (Playwright, `frontend/e2e`) se documentan aparte en [`e2e-front-2026-11-25.md`](e2e-front-2026-11-25.md), junto con el procedimiento para correrlos.
+
+### Estado de los defectos (`defectos.md`)
+
+| Id | Título | Estado |
+|---|---|---|
+| DEF-001 | El progreso de metas en USD mezcla monedas | Abierto, no corregido |
+| DEF-002 | El registro daba 500 el día límite de los 18 años con la base fuera de UTC | Corregido parcialmente (400 en lugar de 500); arreglo de fondo (migración) pendiente |
+| DEF-003 | Pista de la barra de metas con poco contraste | Abierto |
+| DEF-004 | Botón deshabilitado del registro poco legible en oscuro | Abierto |
+| DEF-005 | Etiquetas «Desde» y «Hasta» desalineadas unos 3 px | Abierto |
+| DEF-006 | Falta señal de scroll en los diálogos a 390 px | Abierto |
+| DEF-007 | El tiempo de respuesta del login revela qué correos existen | Corregido |
+| DEF-008 | El login distinguía mayúsculas y espacios en el correo | Corregido |
+| DEF-009 | El login no tenía límite de intentos | Corregido |
+| DEF-010 | Un token JWT seguía sirviendo tras borrar al usuario | Corregido (sin caché) |
+
+Los E2E del 2026-11-25 **no encontraron defectos del producto**: las fallas que hay son de las pruebas (ver el documento de E2E), por lo que no se abrió DEF-011.

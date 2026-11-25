@@ -22,7 +22,11 @@ test.describe('Movimientos', () => {
   });
 
   test('pide la lista con page y limit y lee el total del cuerpo', async ({ page }) => {
-    const request = await page.waitForRequest((req) => req.url().includes('/api/movements?'));
+    // beforeEach already loaded the page, so the list request happened before this test started: subscribe first, then reload.
+    const [request] = await Promise.all([
+      page.waitForRequest((req) => req.url().includes('/api/movements?')),
+      page.reload(),
+    ]);
     const url = new URL(request.url());
 
     expect(url.searchParams.get('page')).toBe('1');
