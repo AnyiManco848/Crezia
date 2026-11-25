@@ -379,6 +379,7 @@ El servidor, cuando corre con `NODE_ENV=production`, **se niega a arrancar** si 
 | `TEST_MODE` | Activa las protecciones de la base de pruebas. La API lo rechaza en producción. |
 | `PERF_MODE` y todas las `PERF_*` | Solo para pruebas de carga locales. |
 | `REGISTER_RATE_LIMIT_MAX`, `REGISTER_RATE_LIMIT_WINDOW_MS` | Subir el límite del registro (`.env.test` usa 1000) quita la protección contra registros masivos. En producción valen los de por defecto: 10 intentos cada 15 minutos por IP. |
+| `LOGIN_RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_WINDOW_MS` | Subir el límite del login quita la protección contra adivinar contraseñas. En producción valen los de por defecto: 10 intentos cada 15 minutos por IP (cuentan todos, también los correctos). Con `TEST_MODE=true` y sin `LOGIN_RATE_LIMIT_MAX` el límite es 1000; por eso `TEST_MODE` tampoco puede existir en producción. |
 | `E2E_*` | Credenciales de las pruebas E2E. |
 | Un `JWT_SECRET` de ejemplo | `change-me…`, `test-only-secret…`, etc. |
 | Cualquier URL de la base de **pruebas** o de la local de Docker | Producción solo habla con el proyecto de Supabase real. |

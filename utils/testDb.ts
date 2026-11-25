@@ -55,3 +55,37 @@ export async function getDatabaseCurrentDate(): Promise<string> {
     await prisma.$disconnect();
   }
 }
+
+// Users created by the login API tests (login-security.spec.ts) use their own document prefix, so the registration
+// tests' cleanup (E2E prefix) never deletes them while both files run in parallel.
+export const E2E_LOGIN_DOCUMENT_PREFIX = 'E2L';
+
+// Hard-deletes the users of the login tests. Same guard and same double marker (e2e email domain + login prefix).
+export async function deleteE2eLoginUsers(): Promise<number> {
+  assertApiTestRun();
+  const prisma = createPrismaClient();
+  try {
+    const { count } = await prisma.user.deleteMany({
+      where: { email: { endsWith: E2E_EMAIL_DOMAIN }, documentId: { startsWith: E2E_LOGIN_DOCUMENT_PREFIX } },
+    });
+    return count;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Soft-deletes (deleted_at = now) ONE login-test user, the way the application marks a deleted account.
+// Only rows with the e2e email domain AND the login prefix can be touched.
+export async function softDeleteE2eLoginUser(email: string): Promise<number> {
+  assertApiTestRun();
+  const prisma = createPrismaClient();
+  try {
+    const { count } = await prisma.user.updateMany({
+      where: { email, deletedAt: null, documentId: { startsWith: E2E_LOGIN_DOCUMENT_PREFIX } },
+      data: { deletedAt: new Date() },
+    });
+    return count;
+  } finally {
+    await prisma.$disconnect();
+  }
+}

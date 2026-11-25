@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { UNDERAGE_MESSAGE } from '../../src/domain/entities/User';
 import { UserAlreadyExistsError, ValidationError } from '../../src/domain/errors';
 import type { PrismaClient } from '../../src/generated/prisma/client';
@@ -36,6 +36,25 @@ function repositoryFailingWith(error: unknown) {
   const prisma = { user: { create: async () => { throw error; } } } as unknown as PrismaClient;
   return new PrismaUserRepository(prisma);
 }
+
+describe('PrismaUserRepository.isActive (DEF-010)', () => {
+  function repositoryFinding(row: { id: string } | null) {
+    const findUnique = vi.fn(async () => row);
+    const prisma = { user: { findUnique } } as unknown as PrismaClient;
+    return { repository: new PrismaUserRepository(prisma), findUnique };
+  }
+
+  it('looks the user up by primary key ignoring soft-deleted rows, selecting only the id', async () => {
+    const { repository, findUnique } = repositoryFinding({ id: 'u1' });
+
+    expect(await repository.isActive('u1')).toBe(true);
+    expect(findUnique).toHaveBeenCalledWith({ where: { id: 'u1', deletedAt: null }, select: { id: true } });
+  });
+
+  it('is false when there is no active row (unknown or deleted user)', async () => {
+    expect(await repositoryFinding(null).repository.isActive('u1')).toBe(false);
+  });
+});
 
 describe('PrismaUserRepository.create - database errors', () => {
   it('turns the chk_users_adult violation (23514) into the same 400 as the age validation', async () => {

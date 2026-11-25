@@ -47,6 +47,7 @@ Rellena **las cuatro variables** y deja `TEST_MODE=true`:
 | `PORT` | `3000` |
 | `TEST_MODE` | `true` (obligatoria) |
 | `REGISTER_RATE_LIMIT_MAX` | `1000` (sube el límite de registros para que las pruebas no lo alcancen). |
+| `LOGIN_RATE_LIMIT_MAX` | Opcional. Con `TEST_MODE=true` y sin esta variable el login usa un límite alto controlado (1000); no hace falta añadirla a `.env.test`. |
 
 Verifica la guarda (no toca la base, solo compara identidades):
 
@@ -95,7 +96,14 @@ $env:E2E_REGISTER_RATE_LIMIT_MAX = "5"
 npx playwright test tests/api/auth/register.spec.ts -g "rate limit"
 ```
 
-Cuando termines: `Remove-Item Env:REGISTER_RATE_LIMIT_MAX, Env:E2E_REGISTER_RATE_LIMIT_MAX` y reinicia con el límite normal. (Si en esa misma ventana ya gastaste intentos, el contador es por IP y por 15 minutos: reinicia el servidor para ponerlo en cero.)
+**Prueba del 429 del login (D-9):** va aparte y con su propio comando. Levanta su backend con límite bajo (5 por defecto, `LOGIN_RATE_LIMIT_TEST_MAX` para cambiarlo) y no crea usuarios:
+
+```powershell
+$env:E2E_TEST_DB_CONFIRMED = "true"
+npm run test:api:ratelimit:login
+```
+
+Cuando termines con la del registro: `Remove-Item Env:REGISTER_RATE_LIMIT_MAX, Env:E2E_REGISTER_RATE_LIMIT_MAX` y reinicia con el límite normal. (Si en esa misma ventana ya gastaste intentos, el contador es por IP y por 15 minutos: reinicia el servidor para ponerlo en cero.)
 
 ## 6. Postman (registro)
 

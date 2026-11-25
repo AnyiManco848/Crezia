@@ -20,6 +20,7 @@
     "db:test:seed": "npm run db:test:check && tsx --env-file=.env.test prisma/seed.ts",
     "test:api:test": "npm run db:test:check && node --env-file=.env.test node_modules/@playwright/test/cli.js test",
     "test:api:ratelimit": "node scripts/test-api-ratelimit.cjs",
+    "test:api:ratelimit:login": "node scripts/test-api-ratelimit-login.cjs",
     "dev:perf": "tsx watch --env-file=.env.perf src/server.ts",
     "db:perf:reset": "tsx --env-file=.env.perf scripts/perf-db-reset.ts",
     "db:perf:seed": "tsx --env-file=.env.perf prisma/seed.perf.ts"

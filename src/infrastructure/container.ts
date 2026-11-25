@@ -32,6 +32,7 @@ import { PrismaCategoryRepository } from './repositories/PrismaCategoryRepositor
 import { PrismaCurrencyRepository } from './repositories/PrismaCurrencyRepository';
 import { PrismaGoalRepository } from './repositories/PrismaGoalRepository';
 import { PrismaMovementRepository } from './repositories/PrismaMovementRepository';
+import type { UserRepository } from '../domain/repositories/UserRepository';
 import { PrismaUserRepository } from './repositories/PrismaUserRepository';
 import { BcryptPasswordHasher } from './security/BcryptPasswordHasher';
 import { JwtTokenService } from './security/JwtTokenService';
@@ -39,6 +40,8 @@ import { JwtTokenService } from './security/JwtTokenService';
 // Composition root: wires infrastructure implementations into use cases.
 export interface Container {
   tokenService: TokenService;
+  // Read-only port the authentication middleware uses to check the user is still active.
+  userRepository: Pick<UserRepository, 'isActive'>;
   loginUseCase: LoginUseCase;
   registerUserUseCase: RegisterUserUseCase;
   categoryUseCases: CategoryUseCases;
@@ -56,11 +59,14 @@ export function createContainer(): Container {
   const currencies = new PrismaCurrencyRepository(prisma);
   const movements = new PrismaMovementRepository(prisma);
   const goals = new PrismaGoalRepository(prisma);
+  // One hasher (one bcrypt cost) for login and registration: the login's dummy hash must cost the same as the real ones.
+  const passwordHasher = new BcryptPasswordHasher();
 
   return {
     tokenService,
-    loginUseCase: new LoginUseCase(users, new BcryptPasswordHasher(), tokenService),
-    registerUserUseCase: new RegisterUserUseCase(users, currencies, new BcryptPasswordHasher(), tokenService),
+    userRepository: users,
+    loginUseCase: new LoginUseCase(users, passwordHasher, tokenService),
+    registerUserUseCase: new RegisterUserUseCase(users, currencies, passwordHasher, tokenService),
     categoryUseCases: {
       list: new ListCategoriesUseCase(categories),
       get: new GetCategoryUseCase(categories),

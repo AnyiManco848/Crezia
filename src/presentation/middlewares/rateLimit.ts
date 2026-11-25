@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { DEFAULT_REGISTER_RATE_LIMIT, type RegisterRateLimitConfig } from '../../config/security';
+import { DEFAULT_LOGIN_RATE_LIMIT, DEFAULT_REGISTER_RATE_LIMIT, type RateLimitConfig, type RegisterRateLimitConfig } from '../../config/security';
 import { TooManyRequestsError } from '../../domain/errors';
 
 // Limits the attempts per client IP. EVERY attempt counts (valid, invalid or repeated email), because the
@@ -8,6 +8,15 @@ import { TooManyRequestsError } from '../../domain/errors';
 // they reset when the server restarts and are not shared between instances (accepted for now).
 // Over the limit it answers 429 through the common error handler, with a Retry-After header in seconds.
 export function createRegisterRateLimiter(config: RegisterRateLimitConfig = DEFAULT_REGISTER_RATE_LIMIT): RequestHandler {
+  return createIpRateLimiter(config);
+}
+
+// Same behaviour for POST /api/auth/login (D-9): its own counter, so failed logins do not eat the registration quota.
+export function createLoginRateLimiter(config: RateLimitConfig = DEFAULT_LOGIN_RATE_LIMIT): RequestHandler {
+  return createIpRateLimiter(config);
+}
+
+function createIpRateLimiter(config: RateLimitConfig): RequestHandler {
   return rateLimit({
     windowMs: config.windowMs,
     limit: config.limit,

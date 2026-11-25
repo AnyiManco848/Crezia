@@ -1,14 +1,12 @@
-import { Router } from 'express';
-import type { TokenService } from '../../application/services';
+import { Router, type RequestHandler } from 'express';
 import type { GoalController } from '../controllers/GoalController';
-import { auth } from '../middlewares/auth';
 import { validate } from '../middlewares/validate';
 import { idParamsSchema, paginationQuerySchema } from '../schemas/commonSchemas';
 import { createGoalBodySchema, updateGoalBodySchema } from '../schemas/goalSchemas';
 
-export function goalRoutes(controller: GoalController, tokens: TokenService): Router {
+export function goalRoutes(controller: GoalController, authenticate: RequestHandler): Router {
   const router = Router();
-  router.use(auth(tokens));
+  router.use(authenticate);
 
   router.get('/', validate({ query: paginationQuerySchema }), controller.list);
   router.get('/:id', validate({ params: idParamsSchema }), controller.get);

@@ -1,7 +1,5 @@
-import { Router } from 'express';
-import type { TokenService } from '../../application/services';
+import { Router, type RequestHandler } from 'express';
 import type { MovementController } from '../controllers/MovementController';
-import { auth } from '../middlewares/auth';
 import { validate } from '../middlewares/validate';
 import { idParamsSchema } from '../schemas/commonSchemas';
 import {
@@ -11,9 +9,9 @@ import {
   updateMovementBodySchema,
 } from '../schemas/movementSchemas';
 
-export function movementRoutes(controller: MovementController, tokens: TokenService): Router {
+export function movementRoutes(controller: MovementController, authenticate: RequestHandler): Router {
   const router = Router();
-  router.use(auth(tokens));
+  router.use(authenticate);
 
   router.get('/', validate({ query: listMovementsQuerySchema }), controller.list);
   // Declared before '/:id': otherwise Express would take "summary" as an id and answer 400 (invalid UUID).

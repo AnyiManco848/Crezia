@@ -7,6 +7,7 @@ import type { TokenService } from '../../../src/application/services';
 import { UnauthorizedError } from '../../../src/domain/errors';
 import { MovementController } from '../../../src/presentation/controllers/MovementController';
 import { errorHandler, notFound } from '../../../src/presentation/middlewares/errorHandler';
+import { authenticate } from '../../../src/presentation/middlewares/auth';
 import { movementRoutes } from '../../../src/presentation/routes/movementRoutes';
 
 const USER_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
@@ -33,7 +34,7 @@ describe('movementRoutes - GET /summary', () => {
 
   beforeAll(async () => {
     const app = express();
-    app.use('/api/movements', movementRoutes(new MovementController(useCases), tokens));
+    app.use('/api/movements', movementRoutes(new MovementController(useCases), authenticate(tokens, { isActive: async () => true })));
     app.use(notFound);
     app.use(errorHandler);
     server = await new Promise<Server>((resolve) => {
