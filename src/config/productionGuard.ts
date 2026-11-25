@@ -52,8 +52,13 @@ export function checkProductionEnv(env: Env = process.env): { errors: string[]; 
     errors.push('REGISTER_RATE_LIMIT_MAX / REGISTER_RATE_LIMIT_WINDOW_MS no deben definirse en producción (usa los valores por defecto).');
   }
 
+  // Same for the login limit (D-9). TEST_MODE already stops the server above; this also catches a raised limit set on its own.
+  if (env.LOGIN_RATE_LIMIT_MAX || env.LOGIN_RATE_LIMIT_WINDOW_MS) {
+    errors.push('LOGIN_RATE_LIMIT_MAX / LOGIN_RATE_LIMIT_WINDOW_MS no deben definirse en producción (usa los valores por defecto).');
+  }
+
   if ((env.TRUST_PROXY ?? '').trim() === '') {
-    warnings.push('TRUST_PROXY no está definida: detrás de un proxy (Railway) todos los clientes compartirían el mismo límite de registro. Ver README.');
+    warnings.push('TRUST_PROXY no está definida: detrás de un proxy (Railway) todos los clientes compartirían el mismo límite de registro y de inicio de sesión. Ver README.');
   }
 
   return { errors, warnings };

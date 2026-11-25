@@ -1,14 +1,12 @@
-import { Router } from 'express';
-import type { TokenService } from '../../application/services';
+import { Router, type RequestHandler } from 'express';
 import type { BankAccountController } from '../controllers/BankAccountController';
-import { auth } from '../middlewares/auth';
 import { validate } from '../middlewares/validate';
 import { createBankAccountBodySchema, updateBankAccountBodySchema } from '../schemas/bankAccountSchemas';
 import { idParamsSchema, paginationQuerySchema } from '../schemas/commonSchemas';
 
-export function bankAccountRoutes(controller: BankAccountController, tokens: TokenService): Router {
+export function bankAccountRoutes(controller: BankAccountController, authenticate: RequestHandler): Router {
   const router = Router();
-  router.use(auth(tokens));
+  router.use(authenticate);
 
   router.get('/', validate({ query: paginationQuerySchema }), controller.list);
   router.get('/:id', validate({ params: idParamsSchema }), controller.get);

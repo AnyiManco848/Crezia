@@ -25,6 +25,19 @@ export interface RegisterRateLimitConfig {
 
 export const DEFAULT_REGISTER_RATE_LIMIT: RegisterRateLimitConfig = { windowMs: 15 * 60 * 1000, limit: 10 };
 
+export interface RateLimitConfig {
+  windowMs: number;
+  limit: number;
+}
+
+// Login attempts per IP and window (D-9). EVERY attempt counts, successful or not: refunding the successful ones would let an
+// attacker with their own account reset the counter between guesses.
+export const DEFAULT_LOGIN_RATE_LIMIT: RateLimitConfig = { windowMs: 15 * 60 * 1000, limit: 10 };
+
+// Controlled high limit used ONLY when TEST_MODE=true and LOGIN_RATE_LIMIT_MAX is not set, so the API suite (which logs in many
+// times from one IP) does not block itself. The production guard refuses to start with TEST_MODE or with any LOGIN_RATE_LIMIT_*.
+export const TEST_MODE_LOGIN_RATE_LIMIT_MAX = 1000;
+
 function positiveInteger(raw: string | undefined, fallback: number, name: string): number {
   if (raw === undefined || raw.trim() === '') return fallback;
   const value = Number(raw);
@@ -38,5 +51,18 @@ export function readRegisterRateLimit(env: Record<string, string | undefined> = 
   return {
     windowMs: positiveInteger(env.REGISTER_RATE_LIMIT_WINDOW_MS, DEFAULT_REGISTER_RATE_LIMIT.windowMs, 'REGISTER_RATE_LIMIT_WINDOW_MS'),
     limit: positiveInteger(env.REGISTER_RATE_LIMIT_MAX, DEFAULT_REGISTER_RATE_LIMIT.limit, 'REGISTER_RATE_LIMIT_MAX'),
+  };
+}
+
+export function readLoginRateLimit(env: Record<string, string | undefined> = process.env): RateLimitConfig {
+  const testMode = env.TEST_MODE === 'true';
+  const hasMax = env.LOGIN_RATE_LIMIT_MAX !== undefined && env.LOGIN_RATE_LIMIT_MAX.trim() !== '';
+  return {
+    windowMs: positiveInteger(env.LOGIN_RATE_LIMIT_WINDOW_MS, DEFAULT_LOGIN_RATE_LIMIT.windowMs, 'LOGIN_RATE_LIMIT_WINDOW_MS'),
+    limit: positiveInteger(
+      env.LOGIN_RATE_LIMIT_MAX,
+      testMode && !hasMax ? TEST_MODE_LOGIN_RATE_LIMIT_MAX : DEFAULT_LOGIN_RATE_LIMIT.limit,
+      'LOGIN_RATE_LIMIT_MAX',
+    ),
   };
 }
