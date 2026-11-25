@@ -7,6 +7,10 @@ export interface UserRepository {
   // True when a non-deleted user already has that email (compared ignoring case) or that document id.
   existsByEmailOrDocumentId(email: string, documentId: string): Promise<boolean>;
 
+  // True when the user exists and is not soft-deleted. Used on every authenticated request (DEF-010), so it must stay a
+  // primary-key lookup.
+  isActive(userId: string): Promise<boolean>;
+
   // Creates a user with role `User`. Throws UserAlreadyExistsError if the database rejects a repeated
   // email or document id (two registrations racing each other).
   create(data: NewUser): Promise<User>;

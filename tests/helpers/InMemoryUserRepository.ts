@@ -20,6 +20,10 @@ export class InMemoryUserRepository implements UserRepository {
     return this.rows.find((row) => row.email === email && !row.deletedAt) ?? null;
   }
 
+  async isActive(userId: string): Promise<boolean> {
+    return this.rows.some((row) => row.id === userId && !row.deletedAt);
+  }
+
   async existsByEmailOrDocumentId(email: string, documentId: string): Promise<boolean> {
     return this.rows.some(
       (row) => !row.deletedAt && (row.email.toLowerCase() === email.toLowerCase() || row.documentId === documentId),

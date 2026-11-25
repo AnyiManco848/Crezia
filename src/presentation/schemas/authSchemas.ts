@@ -2,7 +2,12 @@ import { z } from 'zod';
 import { isAdult, UNDERAGE_MESSAGE } from '../../domain/entities/User';
 
 export const loginBodySchema = z.object({
-  email: z.string({ error: 'El correo es obligatorio' }).trim().pipe(z.email({ error: 'El correo no es válido' })),
+  // Same normalization as the registration (trim + lowercase), so the email is found whatever the capitalization (D-4).
+  email: z
+    .string({ error: 'El correo es obligatorio' })
+    .trim()
+    .pipe(z.email({ error: 'El correo no es válido' }))
+    .transform((value) => value.toLowerCase()),
   password: z.string({ error: 'La contraseña es obligatoria' }).min(1, { error: 'La contraseña es obligatoria' }),
 });
 

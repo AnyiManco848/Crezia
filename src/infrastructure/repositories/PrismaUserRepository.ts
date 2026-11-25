@@ -43,6 +43,11 @@ export class PrismaUserRepository implements UserRepository {
     });
   }
 
+  async isActive(userId: string): Promise<boolean> {
+    const found = await this.prisma.user.findUnique({ where: { id: userId, deletedAt: null }, select: { id: true } });
+    return found !== null;
+  }
+
   async existsByEmailOrDocumentId(email: string, documentId: string): Promise<boolean> {
     const found = await this.prisma.user.findFirst({
       where: { deletedAt: null, OR: [{ email: { equals: email, mode: 'insensitive' } }, { documentId }] },

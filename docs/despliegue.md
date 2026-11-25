@@ -17,7 +17,7 @@ Plan: API en **Railway** (con `Dockerfile`), front en **Vercel**, base de datos 
   ```
   Distinto del de desarrollo y del de pruebas. Cambiarlo más adelante cierra todas las sesiones.
 - [ ] **Contraseña de la base de Supabase** guardada solo en las variables de Railway (`DATABASE_URL`, `DIRECT_URL`). No en el repositorio, no en el chat, no en capturas.
-- [ ] **Sin `TEST_MODE`, `PERF_MODE`, `PERF_*`, `E2E_*` ni `REGISTER_RATE_LIMIT_*`** entre las variables de Railway (tabla del README). La API lo comprueba al arrancar y se niega si los encuentra.
+- [ ] **Sin `TEST_MODE`, `PERF_MODE`, `PERF_*`, `E2E_*` ni `REGISTER_RATE_LIMIT_*` ni `LOGIN_RATE_LIMIT_*`** entre las variables de Railway (tabla del README). La API lo comprueba al arrancar y se niega si los encuentra.
 - [ ] **Usuario de prueba del seed:** `prisma/seed.ts` crea `test@crezia.com` con una contraseña conocida (está en el README). Si el seed ya se corrió contra la base real de Supabase, **ese usuario existe en producción**: decide si lo borras o le cambias la contraseña antes de abrir la API a internet. Hazlo tú, en Supabase.
 
 ### Base de datos (Supabase)

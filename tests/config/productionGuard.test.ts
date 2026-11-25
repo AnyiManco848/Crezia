@@ -46,6 +46,13 @@ describe('checkProductionEnv', () => {
     expect(checkProductionEnv({ ...GOOD, REGISTER_RATE_LIMIT_WINDOW_MS: '1000' }).errors.join()).toMatch(/REGISTER_RATE_LIMIT/);
   });
 
+  it('refuses raised login limits and the TEST_MODE that raises them (D-9)', () => {
+    expect(checkProductionEnv({ ...GOOD, LOGIN_RATE_LIMIT_MAX: '1000' }).errors.join()).toMatch(/LOGIN_RATE_LIMIT/);
+    expect(checkProductionEnv({ ...GOOD, LOGIN_RATE_LIMIT_WINDOW_MS: '1000' }).errors.join()).toMatch(/LOGIN_RATE_LIMIT/);
+    // The high default of TEST_MODE can only be active with TEST_MODE=true, which the guard already refuses.
+    expect(() => assertProductionEnv({ ...GOOD, TEST_MODE: 'true' })).toThrow(ProductionGuardError);
+  });
+
   it('only warns when TRUST_PROXY is missing', () => {
     const result = checkProductionEnv({ ...GOOD, TRUST_PROXY: undefined });
     expect(result.errors).toEqual([]);
