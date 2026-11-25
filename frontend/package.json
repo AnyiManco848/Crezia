@@ -14,7 +14,10 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "mock:api": "node scripts/mock-api.mjs",
+    "visual:capture": "node scripts/capture-screens.mjs",
+    "visual:axe": "node scripts/axe-states.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.108.0",
