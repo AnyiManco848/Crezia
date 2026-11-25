@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import type { RegisterPayload } from '../../application/validation/registerSchema';
 import { authService, type Credentials } from '../../infrastructure/services/authService';
 import { sessionStore } from '../../infrastructure/storage/sessionStore';
 
@@ -11,11 +12,16 @@ export function useAuth() {
     sessionStore.set(await authService.login(credentials));
   }, []);
 
+  // A new account starts a session exactly like the login does (sessionStorage through the same store).
+  const register = useCallback(async (payload: RegisterPayload) => {
+    sessionStore.set(await authService.register(payload));
+  }, []);
+
   // Ends the session and drops every cached query, so the next user never sees the previous user's data.
   const logout = useCallback(() => {
     sessionStore.clear();
     queryClient.clear();
   }, [queryClient]);
 
-  return { session, user: session?.user ?? null, expired, login, logout };
+  return { session, user: session?.user ?? null, expired, login, register, logout };
 }

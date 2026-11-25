@@ -52,12 +52,23 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-function toApiError(status: number, payload: unknown): ApiError {
+// Retry-After is either a number of seconds or an HTTP date. Anything else (or no header) is null.
+export function parseRetryAfter(raw: string | null, now: number = Date.now()): number | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  if (/^\d+$/.test(value)) return Number(value);
+  // Date.parse accepts odd things such as "-5"; a real HTTP date always has letters (day and month names).
+  const date = /[A-Za-z]/.test(value) ? Date.parse(value) : Number.NaN;
+  return Number.isNaN(date) ? null : Math.max(0, Math.ceil((date - now) / 1000));
+}
+
+function toApiError(status: number, payload: unknown, headers: Headers): ApiError {
   const error = (payload as { error?: { code?: unknown; message?: unknown; details?: unknown } } | undefined)?.error;
   const message = typeof error?.message === 'string' && error.message ? error.message : UNEXPECTED_ERROR_MESSAGE;
   const code = typeof error?.code === 'string' ? error.code : 'UNKNOWN';
   const details = Array.isArray(error?.details) ? (error.details as ApiErrorDetail[]) : [];
-  return new ApiError(status, code, message, details);
+  const retryAfter = status === 429 ? parseRetryAfter(headers.get('Retry-After')) : null;
+  return new ApiError(status, code, message, details, retryAfter);
 }
 
 export function createHttpClient({ baseUrl, getToken, onUnauthorized, fetchImpl }: HttpClientOptions): HttpClient {
@@ -90,7 +101,7 @@ export function createHttpClient({ baseUrl, getToken, onUnauthorized, fetchImpl 
 
     if (!response.ok) {
       if (response.status === 401 && auth) onUnauthorized();
-      throw toApiError(response.status, payload);
+      throw toApiError(response.status, payload, response.headers);
     }
 
     return { data: payload as T, status: response.status, headers: response.headers };

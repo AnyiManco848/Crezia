@@ -1,4 +1,4 @@
-import type { AccountType, MovementType, PaymentMethod } from './types';
+import type { AccountType, GoalReason, GoalStatus, MovementType, PaymentMethod } from './types';
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   Savings: 'Ahorros',
@@ -15,6 +15,24 @@ export const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   CreditCard: 'Tarjeta de crédito',
   DebitCard: 'Tarjeta débito',
   Other: 'Otro',
+};
+
+export const GOAL_REASON_LABELS: Record<GoalReason, string> = {
+  Travel: 'Viaje',
+  Vehicle: 'Vehículo',
+  Education: 'Educación',
+  EmergencyFund: 'Fondo de emergencia',
+  HomePurchase: 'Compra de vivienda',
+  Technology: 'Tecnología',
+  DebtPayment: 'Pago de deudas',
+  Other: 'Otro',
+};
+
+export const GOAL_STATUS_LABELS: Record<GoalStatus, string> = {
+  Active: 'Activa',
+  Completed: 'Completada',
+  Cancelled: 'Cancelada',
+  Overdue: 'Vencida',
 };
 
 // Active currencies of the catalog (prisma/seed.ts). There is no endpoint to list them, so they are fixed here;

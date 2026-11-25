@@ -52,7 +52,32 @@ export interface Category {
   description: string | null;
 }
 
-export const ACCOUNT_TYPES = ['Savings', 'Checking', 'Credit', 'Other'] as const;
+export const GOAL_REASONS = ['Travel', 'Vehicle', 'Education', 'EmergencyFund', 'HomePurchase', 'Technology', 'DebtPayment', 'Other'] as const;
+export const GOAL_STATUSES = ['Active', 'Completed', 'Cancelled', 'Overdue'] as const;
+export type GoalReason = (typeof GOAL_REASONS)[number];
+export type GoalStatus = (typeof GOAL_STATUSES)[number];
+
+// Goal as GET /api/goals lists it. The progress comes COMPUTED by the API (it is never stored): `accumulated` is
+// the sum of the user's Expense movements in the goal's category between startDate and endDate, not deleted.
+// Amounts are decimal strings with two places; `percentage` goes from 0 to 100 and is CAPPED at 100, so a goal
+// exceeded is recognised by comparing `accumulated` with `targetAmount`, not by the percentage.
+export interface Goal {
+  id: string;
+  categoryId: string;
+  name: string;
+  reason: GoalReason;
+  reasonOther: string | null;
+  targetAmount: string;
+  currencyCode: string;
+  startDate: string;
+  endDate: string;
+  status: GoalStatus;
+  accumulated: string;
+  remaining: string;
+  percentage: number;
+}
+
+export const ACCOUNT_TYPES =['Savings', 'Checking', 'Credit', 'Other'] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 // Bank account (GET /api/bank-accounts). The balance is computed by the API.

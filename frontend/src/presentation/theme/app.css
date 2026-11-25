@@ -88,7 +88,12 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .auth-main{display:flex;align-items:center;justify-content:center;padding:64px 24px 40px;background:var(--surface)}
 .auth-card{width:100%;max-width:480px}
 .auth-card h1{font-size:26px;margin:0 0 6px}
+.auth-card.wide{max-width:640px}
 .auth-card .lead{color:var(--text-2);margin:0 0 24px}
+.pw-reqs{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--text-2)}
+.pw-reqs li{display:inline-flex;align-items:center;gap:6px}
+.pw-reqs li.met{color:var(--success);font-weight:700}
+.pw-req-mark{display:inline-grid;place-items:center;width:14px}
 .auth-links{text-align:center;margin-top:18px;font-size:14px}
 .stepper{display:flex;gap:8px;margin:4px 0 24px}
 .stepper i{flex:1;height:6px;border-radius:99px;background:var(--track)}
@@ -181,6 +186,13 @@ td.actions,th.actions{width:1%;white-space:nowrap;text-align:right}
 .progress{height:12px;border-radius:99px;background:var(--track);overflow:hidden}
 .progress>div{height:100%;background:var(--primary);border-radius:99px}
 .progress.done>div{background:var(--success)}
+/* Meta superada: además del color y del texto, la barra lleva rayas. */
+.progress.over>div{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.4) 0 6px,transparent 6px 12px)}
+.goal-progress{min-width:200px;display:flex;flex-direction:column;gap:4px}
+.goal-pct{color:var(--text);font-variant-numeric:tabular-nums}
+.goal-msg{display:flex;align-items:center;gap:4px}
+.goal-msg.met,.goal-msg.exceeded{color:var(--success);font-weight:700}
+.goal-msg svg{width:16px;height:16px;flex:none}
 .goal-nums{display:flex;justify-content:space-between;gap:10px;font-size:14px}
 .goal-nums b{font-variant-numeric:tabular-nums}
 .pct{font-weight:800;font-size:22px;color:var(--info)}
@@ -290,6 +302,8 @@ dialog::backdrop{background:var(--overlay)}
   td.main-cell::before,td.amount-cell::before,td.actions::before{content:none}
   td.main-cell{grid-column:1}
   td.amount-cell{grid-column:2;grid-row:1;text-align:right}
+  td.progress-cell{grid-column:1/-1}
+  td.progress-cell::before{content:none}
   td.actions{grid-column:1/-1;text-align:left;padding-top:6px}
   td.actions .icon-btn{width:44px;height:44px}
   .icon-btn{width:44px;height:44px}

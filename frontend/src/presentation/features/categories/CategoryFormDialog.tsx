@@ -96,7 +96,7 @@ export function CategoryFormDialog({ category, onClose }: CategoryFormDialogProp
             {(control) => (
               <textarea
                 {...control}
-                className="input"
+                className="textarea"
                 rows={3}
                 maxLength={MAX_CATEGORY_DESCRIPTION}
                 value={values.description}

@@ -13,6 +13,9 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly details: ApiErrorDetail[] = [],
+    // Seconds from the Retry-After header of a 429. null when the header is missing or the browser could not read it
+    // (a cross-origin response only shows the headers the API exposes through CORS).
+    readonly retryAfterSeconds: number | null = null,
   ) {
     super(message);
     this.name = 'ApiError';
