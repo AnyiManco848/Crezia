@@ -5,32 +5,42 @@
 
 ARG NODE_VERSION=22
 
-# ---------- 1. Build: all dependencies, Prisma client and TypeScript compilation ----------
-FROM node:${NODE_VERSION}-bookworm-slim AS build
+# ---------- 0. Shared base of the build stages (never shipped) ----------
+# Everything that runs "prisma generate" (npm ci's postinstall and "npm run build") needs DIRECT_URL, because prisma.config.ts
+# reads it with env(): without it the build fails with PrismaConfigEnvError. "generate" never connects, so these are DUMMY
+# values (user "build", password "build", host localhost), not secrets. They live ONLY in this base and in the stages built
+# on it (build, prod-deps, tools); the runtime image does not derive from it and gets the real ones when the container starts.
+FROM node:${NODE_VERSION}-bookworm-slim AS prisma-base
+ENV DIRECT_URL="postgresql://build:build@localhost:5432/build"
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 WORKDIR /app
 COPY package.json package-lock.json ./
 # prisma.config.ts and the schema are needed by "prisma generate" (npm's postinstall).
 COPY prisma.config.ts ./
 COPY prisma ./prisma
-# DIRECT_URL is only read by Prisma to build its config; "generate" never connects. A dummy value, not a secret.
-RUN DIRECT_URL="postgresql://build:build@localhost:5432/build" npm ci
+
+# ---------- 1. Build: all dependencies, Prisma client and TypeScript compilation ----------
+FROM prisma-base AS build
+RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
 
 # ---------- 2. Production dependencies only ----------
-FROM node:${NODE_VERSION}-bookworm-slim AS prod-deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-COPY prisma.config.ts ./
-COPY prisma ./prisma
-RUN DIRECT_URL="postgresql://build:build@localhost:5432/build" npm ci --omit=dev
+FROM prisma-base AS prod-deps
+RUN npm ci --omit=dev
 
 # ---------- 3. Local tools (docker-compose only: seed with tsx). NOT the production image. ----------
 FROM build AS tools
+# The dummy build values must not look like a database: empty them so the seed only runs with the URLs the compose file gives.
+ENV DIRECT_URL="" DATABASE_URL=""
 COPY scripts ./scripts
 
-# ---------- 4. Runtime (this is the stage Railway uses: the last one in the file) ----------
+# ---------- 4. Runtime: the API, ready for production ----------
+# It MUST stay the LAST stage of the file: "docker build ." and Railway (no target set) build the last stage, so the image
+# you get without naming a target is this one, with its HEALTHCHECK and the unprivileged "node" user. The compose file names
+# targets explicitly (runtime, tools). Railway ignores the Docker HEALTHCHECK and uses its own health check setting
+# (path /api/health in the service settings, see docs/despliegue.md).
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
