@@ -150,7 +150,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .filters label{font-size:13px}
 
 /* Tabla */
-.table-wrap{overflow-x:auto;overflow-y:hidden}
+.table-wrap{overflow-x:auto;overflow-y:hidden;position:relative}
 table{width:100%;border-collapse:collapse}
 th{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-2);text-align:left;padding:12px 18px;background:var(--surface-2);font-weight:700}
 td{padding:14px 18px;border-top:1px solid var(--border);vertical-align:middle}
@@ -247,7 +247,7 @@ dialog::backdrop{background:var(--overlay)}
 /* Tablet: barra lateral compacta */
 @media (max-width:1099px){
   :root{--sidebar:92px}
-  .sidebar{padding:16px 8px;align-items:stretch}
+  .sidebar{padding:16px 4px;align-items:stretch}
   th,td{padding-left:12px;padding-right:12px}
   .sidebar .wordmark{display:none}
   .user-btn{justify-content:center;padding:6px 0}
@@ -308,6 +308,21 @@ dialog::backdrop{background:var(--overlay)}
   td.actions .icon-btn{width:44px;height:44px}
   .icon-btn{width:44px;height:44px}
   .btn.block-m{width:100%}
+}
+.goals-table td.dates-cell{white-space:nowrap}
+/* Metas: seis columnas más acciones no caben entre 720 y 1099 px (la tabla escondía acciones y estado detrás de un scroll):
+   en ese rango se usa la misma tarjeta del celular, solo para esta tabla. */
+@media (min-width:720px) and (max-width:1099px){
+  .goals-table,.goals-table thead,.goals-table tbody,.goals-table tr,.goals-table td{display:block}
+  .goals-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .goals-table tbody tr{padding:14px 20px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr auto;gap:2px 12px}
+  .goals-table td{border:0;padding:2px 0}
+  .goals-table td[data-label]::before{content:attr(data-label)": ";font-size:12px;font-weight:700;color:var(--text-2)}
+  .goals-table td.main-cell::before,.goals-table td.amount-cell::before,.goals-table td.actions::before,.goals-table td.progress-cell::before{content:none}
+  .goals-table td.main-cell{grid-column:1}
+  .goals-table td.amount-cell{grid-column:2;grid-row:1;text-align:right}
+  .goals-table td.progress-cell{grid-column:1/-1}
+  .goals-table td.actions{grid-column:1/-1;text-align:left;padding-top:6px}
 }
 @media (max-width:480px){ .pager .controls{width:100%;justify-content:space-between} }
 

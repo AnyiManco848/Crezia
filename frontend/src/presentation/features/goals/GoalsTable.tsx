@@ -22,7 +22,7 @@ export function GoalsTable({ goals, categories, catalogsReady, onEdit, onDelete 
   const categoryName = (id: string) => categories.find((category) => category.id === id)?.name ?? (catalogsReady ? MISSING_CATEGORY_LABEL : '…');
 
   return (
-    <table>
+    <table className="goals-table">
       <caption className="sr-only">Metas de ahorro</caption>
       <thead>
         <tr>
@@ -50,7 +50,7 @@ export function GoalsTable({ goals, categories, catalogsReady, onEdit, onDelete 
             <td className="num amount-cell" data-label="Monto objetivo">
               {formatMoney(goal.targetAmount, goal.currencyCode)}
             </td>
-            <td data-label="Fechas">
+            <td className="dates-cell" data-label="Fechas">
               <div>
                 <span className="cell-sub">Del </span>
                 {formatDate(goal.startDate)}
