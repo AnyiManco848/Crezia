@@ -40,7 +40,11 @@ Plan: API en **Railway** (con `Dockerfile`), front en **Vercel**, base de datos 
 ### Código y construcción
 
 - [ ] `npm test` en la raíz y `npm test` + `npm run typecheck` + `npm run lint` en `frontend/` en verde.
-- [ ] `docker build --target runtime -t crezia-api .` termina sin errores y `docker compose up --build` deja la API respondiendo en `http://localhost:3000/api/health` (se probó por partes sin Docker, ver "No verificado" abajo).
+- [x] `docker build --target runtime -t crezia-api .` termina sin errores y `docker compose up --build` deja la API respondiendo en `http://localhost:3000/api/health`. **Verificado el 2026-11-25 con Docker local y solo valores ficticios** (Railway no se probó):
+  - Las tres imágenes del compose (`api`, `migrate`, `seed`) se construyen; las migraciones y el seed corren en sus contenedores; `GET /api/health` → 200; el login con `test@crezia.com` y la clave del seed devuelve un token; el proceso corre como `node` (uid 1000), no como root, y el `HEALTHCHECK` marca `healthy`.
+  - **Sin `--target`, `docker build .` produce la imagen de la API** (la etapa `runtime` es la última del `Dockerfile`; mismas capas que la `runtime` del compose). Tamaño: 827 MB en disco, unos 183 MB comprimidos.
+  - La imagen de producción se probó con `docker run` y `NODE_ENV=production`, sin credenciales reales: **se niega a arrancar** (salida 1, mensaje en español) con `TEST_MODE=true`, `LOGIN_RATE_LIMIT_MAX`, `CORS_ORIGINS` con localhost o un `JWT_SECRET` de ejemplo (y con `PERF_MODE` por la guarda de perf); con una configuración válida y ficticia (`JWT_SECRET` aleatorio de 96 caracteres, `CORS_ORIGINS=https://…`, `TRUST_PROXY=1`) **arranca**, `GET /api/health` responde 200, CORS solo permite el origen configurado y una ruta protegida sin token da 401.
+  - Dependencias tras `npm audit fix` y Prisma 7.10.1: ver [`docs/testing/npm-audit-2026-11-25.md`](testing/npm-audit-2026-11-25.md).
 - [ ] Build del front con la URL real: `$env:VITE_API_URL="https://tu-api.up.railway.app"; npm run build` en `frontend/` termina bien y `dist/index.html` no menciona localhost.
 
 ### Railway (⚠ comprueba cada ajuste en el panel)
@@ -125,6 +129,6 @@ No pruebes el límite del registro (429) en producción salvo que sea la prueba 
 
 ## 5. No verificado en esta preparación
 
-- La imagen Docker y el `docker-compose.yml` **no se construyeron ni se ejecutaron** (el motor de Docker estaba apagado). Se comprobó por partes: `docker compose config` resuelve solo a la base local; las etapas del `Dockerfile` se reprodujeron con npm en una carpeta limpia (instalación, compilación, dependencias de producción, arranque y `prisma migrate deploy` contra una base inexistente).
+- ~~La imagen Docker y el `docker-compose.yml` no se construyeron ni se ejecutaron.~~ **Ya se construyeron y ejecutaron el 2026-11-25 en Docker local** (ver la casilla de «Código y construcción»). Sigue sin verificarse la construcción **en Railway** ni la imagen contra una base real.
 - Nada de lo que aparece en los paneles de Railway y Vercel (nombres de ajustes, detección del `Dockerfile`, comando previo, healthcheck, valor de `TRUST_PROXY`, reescrituras y cabeceras de `vercel.json`).
 - Ninguna migración ni consulta se ejecutó contra Supabase.
