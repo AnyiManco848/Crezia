@@ -20,7 +20,11 @@ test.describe('Cuentas', () => {
   });
 
   test('pide la lista con page y limit y lee el total de las cabeceras', async ({ page }) => {
-    const response = await page.waitForResponse((res) => res.url().includes('/api/bank-accounts?'));
+    // beforeEach already loaded the page, so the list response may be gone: subscribe first, then reload.
+    const [response] = await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/api/bank-accounts?')),
+      page.reload(),
+    ]);
     const url = new URL(response.url());
 
     expect(url.searchParams.get('page')).toBe('1');

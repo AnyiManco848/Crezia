@@ -18,6 +18,7 @@
     "db:test:check": "tsx --env-file=.env.test scripts/test-db-check.ts",
     "db:test:migrate": "npm run db:test:check && node --env-file=.env.test node_modules/prisma/build/index.js migrate deploy",
     "db:test:seed": "npm run db:test:check && tsx --env-file=.env.test prisma/seed.ts",
+    "db:test:purge-e2e": "npm run db:test:check && tsx --env-file=.env.test scripts/test-db-purge-e2e.ts",
     "test:api:test": "npm run db:test:check && node --env-file=.env.test node_modules/@playwright/test/cli.js test",
     "test:api:ratelimit": "node scripts/test-api-ratelimit.cjs",
     "test:api:ratelimit:login": "node scripts/test-api-ratelimit-login.cjs",

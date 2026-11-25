@@ -39,7 +39,8 @@ test.describe('Metas', () => {
     await form.getByRole('button', { name: 'Guardar' }).click();
 
     await expect(form.getByText('El nombre es obligatorio')).toBeVisible();
-    await expect(form.getByText('Selecciona una categoría')).toBeVisible();
+    // The placeholder <option> has the same text as the error, so look only at the alert.
+    await expect(form.getByRole('alert').filter({ hasText: 'Selecciona una categoría' })).toBeVisible();
     await expect(form.getByText('El monto es obligatorio')).toBeVisible();
     await expect(form.getByText('La fecha fin es obligatoria')).toBeVisible();
   });

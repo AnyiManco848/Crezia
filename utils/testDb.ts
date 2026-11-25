@@ -89,3 +89,57 @@ export async function softDeleteE2eLoginUser(email: string): Promise<number> {
     await prisma.$disconnect();
   }
 }
+
+// Prefix the front E2E tests give to every name/description they create ("E2E categoría …", "E2E banco …", "E2E meta …",
+// "E2E movimiento …"). The API tests use "PW " and are NOT touched by the purge.
+export const E2E_NAME_PREFIX = 'E2E ';
+
+export interface PurgeCounts {
+  movements: number;
+  goals: number;
+  bankAccounts: number;
+  categories: number;
+}
+
+// Hard-deletes the rows the front E2E tests left behind: only rows that are ALREADY soft-deleted (deleted_at set) and whose
+// name/description starts with "E2E ". The API only does soft delete, so these rows pile up in the test database. Order matters
+// because of the foreign keys: movements, goals, then accounts and categories, and an account or category that something else
+// still references (a movement or goal that is not an E2E row) is left alone instead of failing. Categories must also belong
+// to a user (system categories have no owner). It never touches users, so the seed user stays. Guarded: only the TEST database
+// (assertApiTestRun). With dryRun it only counts. Everything runs in one transaction.
+export async function purgeE2eSoftDeletedRows(dryRun = false): Promise<PurgeCounts> {
+  assertApiTestRun();
+  const prisma = createPrismaClient();
+  try {
+    const prefix = { startsWith: E2E_NAME_PREFIX };
+    const deleted = { not: null };
+    const whereMovements = { deletedAt: deleted, description: prefix };
+    const whereGoals = { deletedAt: deleted, name: prefix };
+    const whereAccounts = { deletedAt: deleted, bankName: prefix, movements: { none: {} } };
+    const whereCategories = {
+      deletedAt: deleted,
+      userId: { not: null },
+      name: prefix,
+      movements: { none: {} },
+      goals: { none: {} },
+      notifications: { none: {} },
+    };
+    if (dryRun) {
+      // In a dry run the later tables still see the rows the earlier ones would delete, so their counts can be lower than the real ones.
+      return {
+        movements: await prisma.movement.count({ where: whereMovements }),
+        goals: await prisma.goal.count({ where: whereGoals }),
+        bankAccounts: await prisma.bankAccount.count({ where: whereAccounts }),
+        categories: await prisma.category.count({ where: whereCategories }),
+      };
+    }
+    return await prisma.$transaction(async (tx) => ({
+      movements: (await tx.movement.deleteMany({ where: whereMovements })).count,
+      goals: (await tx.goal.deleteMany({ where: whereGoals })).count,
+      bankAccounts: (await tx.bankAccount.deleteMany({ where: whereAccounts })).count,
+      categories: (await tx.category.deleteMany({ where: whereCategories })).count,
+    }));
+  } finally {
+    await prisma.$disconnect();
+  }
+}

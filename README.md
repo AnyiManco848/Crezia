@@ -343,6 +343,8 @@ npm run e2e
 
 Sin `E2E_TEST_DB_CONFIRMED=true`, sin credenciales o sin backend respondiendo, las pruebas se saltan con un aviso. Si falta alguna variable en `.env.test`, Node usaría el valor del `.env` real: por eso se piden las cuatro.
 
+Procedimiento detallado (qué variables del front hacen falta y cuáles no, CORS, cómo cerrar los procesos) y el último resultado: [`docs/testing/e2e-front-2026-11-25.md`](docs/testing/e2e-front-2026-11-25.md).
+
 ## Despliegue (Railway + Vercel + Supabase)
 
 Esta sección **prepara** el despliegue; no hay nada desplegado todavía. La lista de verificación previa y la prueba del flujo principal están en [`docs/despliegue.md`](docs/despliegue.md).

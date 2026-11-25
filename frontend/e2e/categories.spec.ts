@@ -21,7 +21,11 @@ test.describe('Categorías', () => {
   });
 
   test('pide la lista con page y limit y lee el total de las cabeceras', async ({ page }) => {
-    const response = await page.waitForResponse((res) => res.url().includes('/api/categories?'));
+    // beforeEach already loaded the page, so the list response may be gone: subscribe first, then reload.
+    const [response] = await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/api/categories?')),
+      page.reload(),
+    ]);
     const url = new URL(response.url());
 
     expect(url.searchParams.get('page')).toBe('1');
@@ -48,7 +52,7 @@ test.describe('Categorías', () => {
       await form.getByLabel('Descripción (opcional)').fill('Prueba');
       await form.getByRole('button', { name: 'Guardar' }).click();
       await expect(page.getByText('Categoría creada')).toBeVisible();
-      await expect(page.getByRole('cell', { name })).toBeVisible();
+      await expect(page.getByRole('cell', { name, exact: true })).toBeVisible();
 
       await page.getByRole('button', { name: `Editar ${name}` }).click();
       const editForm = page.getByRole('dialog', { name: 'Editar categoría' });
@@ -57,7 +61,7 @@ test.describe('Categorías', () => {
       await editForm.getByLabel('Nombre').fill(currentName);
       await editForm.getByRole('button', { name: 'Guardar' }).click();
       await expect(page.getByText('Categoría actualizada')).toBeVisible();
-      await expect(page.getByRole('cell', { name: currentName })).toBeVisible();
+      await expect(page.getByRole('cell', { name: currentName, exact: true })).toBeVisible();
 
       await page.getByRole('button', { name: `Eliminar ${currentName}` }).click();
       await page.getByRole('dialog', { name: 'Eliminar categoría' }).getByRole('button', { name: 'Eliminar' }).click();
