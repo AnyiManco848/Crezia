@@ -229,12 +229,12 @@ describe('login screen', () => {
     expect(screen.getByRole('button', { name: 'Ocultar contraseña' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('puts the theme switch on the login and points "Registrarse" to the pending screen', async () => {
+  it('puts the theme switch on the login and points "Registrarse" to the registration screen', async () => {
     const user = userEvent.setup();
     renderApp('/login');
 
     expect(screen.getByRole('radiogroup', { name: 'Tema de color' })).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'Registrarse' }));
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Registro' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Crea tu cuenta' })).toBeInTheDocument());
   });
 });

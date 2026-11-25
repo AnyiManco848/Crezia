@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createHttpClient } from './client';
+import { createHttpClient, parseRetryAfter } from './client';
 import { ApiError, getErrorMessage, NETWORK_ERROR_MESSAGE, NetworkError, UNEXPECTED_ERROR_MESSAGE } from './errors';
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}) {
@@ -144,5 +144,54 @@ describe('getErrorMessage', () => {
   it('never leaks an unknown error message', () => {
     expect(getErrorMessage(new Error('secret stack detail'))).toBe(UNEXPECTED_ERROR_MESSAGE);
     expect(getErrorMessage('boom')).toBe(UNEXPECTED_ERROR_MESSAGE);
+  });
+});
+
+describe('Retry-After on a 429', () => {
+  const tooMany = (headers: Record<string, string> = {}) =>
+    jsonResponse({ error: { code: 'TOO_MANY_REQUESTS', message: 'Demasiados intentos. Inténtalo de nuevo en unos minutos.' } }, 429, headers);
+
+  it('reads the number of seconds into the ApiError', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(tooMany({ 'Retry-After': '42' }));
+    const { client } = setup(fetchImpl);
+
+    const error = await client.post('/api/auth/register', {}, { auth: false }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(429);
+    expect((error as ApiError).retryAfterSeconds).toBe(42);
+  });
+
+  it('is null when the header is missing or unreadable (CORS does not expose it)', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(tooMany());
+    const { client } = setup(fetchImpl);
+
+    const error = await client.post('/api/auth/register', {}, { auth: false }).catch((e: unknown) => e);
+
+    expect((error as ApiError).retryAfterSeconds).toBeNull();
+  });
+
+  it('is only read on a 429', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ error: { code: 'CONFLICT', message: 'x' } }, 409, { 'Retry-After': '5' }));
+    const { client } = setup(fetchImpl);
+
+    const error = await client.post('/api/auth/register', {}, { auth: false }).catch((e: unknown) => e);
+
+    expect((error as ApiError).retryAfterSeconds).toBeNull();
+  });
+});
+
+describe('parseRetryAfter', () => {
+  it('accepts seconds and HTTP dates and rejects anything else', () => {
+    expect(parseRetryAfter('120')).toBe(120);
+    expect(parseRetryAfter(' 7 ')).toBe(7);
+    expect(parseRetryAfter('Wed, 21 Oct 2026 07:28:30 GMT', Date.parse('Wed, 21 Oct 2026 07:28:00 GMT'))).toBe(30);
+    expect(parseRetryAfter('Wed, 21 Oct 2026 07:28:30 GMT', Date.parse('Thu, 22 Oct 2026 07:28:00 GMT'))).toBe(0);
+    expect(parseRetryAfter(null)).toBeNull();
+    expect(parseRetryAfter('')).toBeNull();
+    expect(parseRetryAfter('pronto')).toBeNull();
+    expect(parseRetryAfter('-5')).toBeNull();
   });
 });

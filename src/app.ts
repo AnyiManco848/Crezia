@@ -27,7 +27,9 @@ export function createApp(container: Container, options: AppOptions = {}) {
   app.set('trust proxy', options.trustProxy ?? parseTrustProxy(process.env.TRUST_PROXY));
   // Hide the framework: one less hint for scanners.
   app.disable('x-powered-by');
-  app.use(cors({ exposedHeaders: [...PAGINATION_HEADERS] }));
+  // Retry-After comes with the 429 of the registration limiter; without exposing it a browser client on another
+  // origin cannot read how long to wait.
+  app.use(cors({ exposedHeaders: [...PAGINATION_HEADERS, 'Retry-After'] }));
   app.use(express.json());
 
   app.get('/api/health', (_req, res) => {

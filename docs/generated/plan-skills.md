@@ -234,7 +234,7 @@ Los documentos van en español, salvo el código y los identificadores. Las skil
 
 ## 7. Avance del front (React + Vite + TypeScript)
 
-Última actualización: 2026-11-18.
+Última actualización: 2026-11-22.
 
 ### Estado por parte
 
@@ -244,14 +244,16 @@ Los documentos van en español, salvo el código y los identificadores. Las skil
 | `feature/front-dashboard` | **Hecha, pendiente de commit** | Panel conectado a `GET /api/movements/summary` (periodo, ingresos, egresos, balance en COP, tasa de ahorro solo en el front y oculta sin ingresos, barra de ingresos frente a egresos, mensaje del día con las 30 frases aprobadas) con los estados con datos, vacío, cargando y error. El botón "Nuevo movimiento" del estado vacío lleva a `/movimientos` (por ahora pendiente). |
 | `feature/front-movements` | **Hecha, pendiente de commit** | Tabla paginada con el total del cuerpo `{data,page,limit,total}` (10/20/50/100 por página), filtros (tipo, categoría, cuenta, desde, hasta; el rango invertido no se envía), crear, editar y eliminar en diálogo, con los estados con datos, vacío (primer uso y sin resultados), cargando y error. Categorías y cuentas salen de `GET /api/categories` y `GET /api/bank-accounts` (todas las páginas). Los E2E están escritos y **no se han ejecutado**. |
 | `feature/front-accounts` | **Hecha, pendiente de commit** | Cuentas como tarjetas (banco, alias, tipo, saldo con signo en texto, moneda) con paginación por cabeceras `X-Total-Count`/`X-Page`/`X-Limit` (10/20/50/100), crear, editar y eliminar en diálogo, y los estados con datos, vacío, cargando y error. En la edición la moneda solo se envía si cambió; un 409 (cuenta con movimientos) se muestra en el campo Moneda. Los E2E están escritos y **no se han ejecutado**. |
-| `feature/front-goals` | Pendiente | Tarjetas y CRUD (paginación por cabeceras). |
-| `feature/front-categories` | Pendiente | Tabla y CRUD (paginación por cabeceras). |
+| `feature/front-goals` | **Hecha, pendiente de commit y de tu revisión visual** | Metas con progreso calculado por el backend (barra accesible, estados cumplida y superada), CRUD en diálogo, paginación por cabeceras. Defecto conocido: ver `DEF-001` más abajo. E2E escrito, **no ejecutado**. |
+| `feature/front-register` | **Hecha, pendiente de commit y de tu revisión visual** | `/registro` conectada a `POST /api/auth/register`: validación con zod copiada del backend, requisitos de contraseña visibles, mostrar/ocultar, 409 genérico, 429 con cuenta regresiva si se puede leer `Retry-After`, 400 por campo, redirección al Panel con sesión. E2E escrito, **no ejecutado**. |
+| `fix/cors-retry-after` | **Hecha, pendiente de commit** | Backend: `Retry-After` en `exposedHeaders` de CORS (`src/app.ts`) con su prueba (`tests/presentation/corsHeaders.test.ts`). Sin este cambio desplegado, el navegador no puede leer los segundos y el registro muestra el mensaje genérico del 429. |
+| `feature/front-categories` | **Hecha, pendiente de commit y de tu revisión visual** | Tabla y CRUD de categorías con paginación por cabeceras y los estados con datos, vacío, cargando y error. E2E escrito, **no ejecutado**. |
 
 ### Pantallas sin endpoint (no conectadas)
 
 | Pantalla | Estado | Qué falta en el backend |
 |---|---|---|
-| Registro | **Pendiente.** `/registro` muestra "El registro de nuevas cuentas todavía no está disponible". | `POST /api/auth/register`. **Es lo más urgente**: sin él solo entran usuarios sembrados. Especificación escrita, **pendiente de tu aprobación**: [`specs/registro/registro-usuario.md`](specs/registro/registro-usuario.md) (`AUTH-REG-001`, rama `feature/auth-register`). No necesita migración; no toca `financial_profile`; tiene 9 decisiones abiertas (D-1 a D-9). |
+| Registro | **Conectado en el front** (`feature/front-register`). | `POST /api/auth/register`. **Es lo más urgente**: sin él solo entran usuarios sembrados. Especificación escrita, **pendiente de tu aprobación**: [`specs/registro/registro-usuario.md`](specs/registro/registro-usuario.md) (`AUTH-REG-001`, rama `feature/auth-register`). No necesita migración; no toca `financial_profile`; tiene 9 decisiones abiertas (D-1 a D-9). |
 | Encuesta de perfil financiero | **Pendiente, no construida.** | La tabla `FinancialProfile` existe en Prisma, pero no hay casos de uso ni rutas. |
 | Mi perfil | **Pendiente, no construida.** El menú de usuario solo tiene "Cerrar sesión". | `GET /api/users/me` y `PATCH /api/users/me`. Hoy el nombre, el correo y las iniciales salen del `user` guardado con el login. |
 
@@ -270,3 +272,17 @@ Los documentos van en español, salvo el código y los identificadores. Las skil
 - **D-9, límite de intentos del login:** pendiente, en otra rama (`feature/auth-login-rate-limit`), reutilizando el limitador del registro.
 - **Montos en COP sin decimales:** el diseño aprobado muestra COP sin decimales, así que un movimiento de 45.000,50 se ve como "$ 45.001" (se redondea solo al mostrar; el dato guardado es exacto). Si se quiere ver los centavos, hay que cambiarlo en el diseño.
 - **El Panel solo cuenta COP:** los movimientos en USD no entran en el resumen (limitación de la API: una moneda por respuesta, sin tasas de cambio). El Panel lo avisa con una nota. Mostrar USD no está definido.
+
+### Fuera de alcance de esta entrega (trabajo futuro)
+
+- **Mi perfil** (`GET/PATCH /api/users/me`, pantalla y entrada en el menú de usuario): no se construye ahora.
+- **Encuesta de perfil financiero** (3 pasos, tabla `FinancialProfile`): no se construye ahora; hace falta backend.
+
+### Defecto conocido DEF-001 (listo para cuando exista la documentación de defectos)
+
+- **Título:** el progreso de una meta suma gastos sin filtrar por moneda.
+- **Dónde:** backend, cálculo de progreso de metas (`GET /api/goals`).
+- **Qué pasa:** suma los movimientos Expense del usuario en la categoría y el rango de la meta sin distinguir COP de USD; un gasto en USD cuenta como si fuera COP.
+- **Efecto en el front:** las tarjetas muestran ese progreso tal cual. No se corrige en el front.
+- **Estado:** abierto, sin decisión. Mover a `docs/generated/defectos/` cuando se cree.
+- **Registro (parte 3), nota de la regla del nombre:** la especificación dice 1 a 150 caracteres y el código del backend 2 a 120; el front sigue el código.

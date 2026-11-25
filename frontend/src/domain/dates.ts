@@ -22,3 +22,18 @@ export function isRealIsoDate(value: string): boolean {
   const date = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
 }
+
+export const MINIMUM_AGE = 18;
+export const UNDERAGE_MESSAGE = `Debes tener ${MINIMUM_AGE} años o más`;
+
+// The latest birth date of a person who has completed 18 years on `today` ("YYYY-MM-DD"). Calendar dates compared as
+// text, like the backend (isAdult) and the database check chk_users_adult. The front uses the person's local date;
+// the backend uses UTC, so near midnight the API may disagree by one day and its answer wins.
+export function latestAdultBirthDate(today: Date = new Date()): string {
+  const pad = (n: number, size = 2) => String(n).padStart(size, '0');
+  return `${pad(today.getFullYear() - MINIMUM_AGE, 4)}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+}
+
+export function isAdult(birthDate: string, today: Date = new Date()): boolean {
+  return birthDate <= latestAdultBirthDate(today);
+}

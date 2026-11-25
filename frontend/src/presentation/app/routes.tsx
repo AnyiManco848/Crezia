@@ -6,7 +6,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { AccountsPage } from '../features/accounts/AccountsPage';
 import { MovementsPage } from '../features/movements/MovementsPage';
 import { LoginPage } from '../features/login/LoginPage';
-import { RegisterPendingPage } from '../features/pending/RegisterPendingPage';
+import { RegisterPage } from '../features/register/RegisterPage';
 import { AppLayout } from '../layout/AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -24,12 +24,11 @@ function NotFoundPage() {
   );
 }
 
-// RegisterPendingPage is replaced by the real screen in front-register.
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/registro" element={<RegisterPendingPage />} />
+      <Route path="/registro" element={<RegisterPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/panel" replace />} />
