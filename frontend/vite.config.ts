@@ -42,7 +42,16 @@ export default defineConfig(({ mode, command }) => {
         reporter: ['text-summary', 'lcov'],
         reportsDirectory: './coverage',
         include: ['src/**/*.{ts,tsx}'],
-        exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/**/*.d.ts', 'src/main.tsx'],
+        // Keep in sync with sonar.coverage.exclusions (sonar-project.properties); rationale: docs/testing/cobertura.md.
+        exclude: [
+          'src/**/*.test.{ts,tsx}',
+          'src/test/**',
+          'src/**/*.d.ts',
+          // Entry point and composition: providers and one-line bootstrap, no logic.
+          'src/main.tsx',
+          'src/presentation/app/App.tsx',
+          'src/application/validation/zodSetup.ts',
+        ],
       },
     },
   };
