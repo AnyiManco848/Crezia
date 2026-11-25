@@ -11,7 +11,10 @@ describe('CORS - exposed response headers', () => {
   let baseUrl: string;
 
   beforeAll(async () => {
-    const app = createApp({} as Container, { registerRateLimit: { windowMs: 60_000, limit: 1 } });
+    const app = createApp({} as Container, {
+      registerRateLimit: { windowMs: 60_000, limit: 1 },
+      corsOrigins: ['http://localhost:5173'],
+    });
     server = await new Promise<Server>((resolve) => {
       const listening = app.listen(0, '127.0.0.1', () => resolve(listening));
     });

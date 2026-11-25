@@ -41,3 +41,17 @@ export async function findUserByEmail(email: string) {
     await prisma.$disconnect();
   }
 }
+
+// Read-only: CURRENT_DATE as the database sees it ("YYYY-MM-DD", in the time zone of the database session).
+// Only for the TEST database (guard). DEF-002 (docs/testing/defectos.md): the age check chk_users_adult uses this date,
+// while the API uses the UTC date, so a test can tell when the two differ.
+export async function getDatabaseCurrentDate(): Promise<string> {
+  assertApiTestRun();
+  const prisma = createPrismaClient();
+  try {
+    const rows = await prisma.$queryRaw<{ today: string }[]>`SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS today`;
+    return rows[0].today;
+  } finally {
+    await prisma.$disconnect();
+  }
+}

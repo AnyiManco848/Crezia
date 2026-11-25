@@ -1,37 +1,18 @@
 import react from '@vitejs/plugin-react';
 import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { buildCsp, resolveApiOrigin } from './src/build/csp';
 
-const DEFAULT_API_URL = 'http://localhost:3000';
-
-// Builds the Content-Security-Policy <meta>. The build policy is strict (no inline scripts, no eval).
-// The dev policy is looser only because Vite needs it: the React Refresh preamble is an inline script,
-// Vite injects CSS through <style> tags, and HMR talks over a WebSocket.
-function cspPlugin(apiUrl: string): Plugin {
-  const apiOrigin = new URL(apiUrl).origin;
-
+// Injects the Content-Security-Policy <meta> (see src/build/csp.ts). The API origin comes from VITE_API_URL at build
+// time: in a production build it is required, must be https and cannot be localhost.
+function cspPlugin(apiOrigin: string): Plugin {
   return {
     name: 'crezia-csp',
     transformIndexHtml(_html, ctx) {
-      const dev = Boolean(ctx.server);
-      const policy = [
-        "default-src 'self'",
-        dev ? "script-src 'self' 'unsafe-inline'" : "script-src 'self'",
-        dev
-          ? "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
-          : "style-src 'self' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data:",
-        `connect-src 'self' ${apiOrigin}${dev ? ' ws://localhost:* ws://127.0.0.1:*' : ''}`,
-        "object-src 'none'",
-        "base-uri 'self'",
-        "form-action 'self'",
-      ].join('; ');
-
       return [
         {
           tag: 'meta',
-          attrs: { 'http-equiv': 'Content-Security-Policy', content: policy },
+          attrs: { 'http-equiv': 'Content-Security-Policy', content: buildCsp({ apiOrigin, dev: Boolean(ctx.server) }) },
           injectTo: 'head-prepend',
         },
       ];
@@ -39,11 +20,15 @@ function cspPlugin(apiUrl: string): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
+  const apiOrigin = resolveApiOrigin(env.VITE_API_URL, {
+    production: command === 'build',
+    allowLocal: env.VITE_ALLOW_LOCAL_API === 'true',
+  });
 
   return {
-    plugins: [react(), cspPlugin(env.VITE_API_URL || DEFAULT_API_URL)],
+    plugins: [react(), cspPlugin(apiOrigin)],
     server: { port: 5173, strictPort: true },
     preview: { port: 4173, strictPort: true },
     test: {

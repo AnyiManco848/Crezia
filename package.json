@@ -9,8 +9,9 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "prisma db seed",
+    "db:migrate": "node scripts/refuse-in-production.cjs && prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "node scripts/refuse-in-production.cjs && prisma db seed",
     "postinstall": "prisma generate",
     "test:api": "playwright test",
     "dev:test": "tsx watch --env-file=.env.test src/server.ts",
@@ -18,6 +19,7 @@
     "db:test:migrate": "npm run db:test:check && node --env-file=.env.test node_modules/prisma/build/index.js migrate deploy",
     "db:test:seed": "npm run db:test:check && tsx --env-file=.env.test prisma/seed.ts",
     "test:api:test": "npm run db:test:check && node --env-file=.env.test node_modules/@playwright/test/cli.js test",
+    "test:api:ratelimit": "node scripts/test-api-ratelimit.cjs",
     "dev:perf": "tsx watch --env-file=.env.perf src/server.ts",
     "db:perf:reset": "tsx --env-file=.env.perf scripts/perf-db-reset.ts",
     "db:perf:seed": "tsx --env-file=.env.perf prisma/seed.perf.ts"
@@ -42,7 +44,9 @@
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.5",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
+    "prisma": "7.10.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -53,7 +57,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.5",
     "@vitest/coverage-v8": "^5.0.4",
-    "prisma": "7.10.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.4"

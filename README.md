@@ -36,7 +36,11 @@ Copy-Item .env.example .env
 | `DIRECT_URL` | Conexión de la CLI de Prisma (migraciones y seed). Usa el **pooler de sesión**: puerto **5432**. |
 | `JWT_SECRET` | Clave para firmar los tokens. Debe ser larga y aleatoria; sin ella la API no arranca. |
 | `JWT_EXPIRES_IN` | Duración del token (por ejemplo `1d`, `12h`). Por defecto `1d`. |
-| `PORT` | Puerto del servidor. Por defecto `3000`. |
+| `PORT` | Puerto del servidor. Por defecto `3000`. En producción lo inyecta la plataforma. |
+| `CORS_ORIGINS` | Orígenes del front que pueden llamar a la API desde un navegador, separados por comas (`https://app.ejemplo.com`). Sin comodines. Si no se define: `http://localhost:5173` y `http://127.0.0.1:5173`. **Obligatoria en producción.** |
+| `TRUST_PROXY` | Número de proxies delante de la API. Vacío en local. Ver "Despliegue". |
+
+`.env.example` lista todas las variables, y la sección "Despliegue" dice cuáles van en producción y cuáles **no** deben existir allí.
 
 Las dos URL se copian desde Supabase → *Connect*. Para generar un `JWT_SECRET`:
 
@@ -51,8 +55,9 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 La base de datos se maneja **solo con migraciones** (`prisma/migrations`). El diseño completo está en `docs/db/crezia_schema_v2.sql`.
 
 ```powershell
-npm run db:migrate   # prisma migrate dev: aplica las migraciones
-npm run db:seed      # prisma db seed: carga los datos de prueba
+npm run db:migrate   # prisma migrate dev: crea y aplica migraciones (desarrollo; se niega con NODE_ENV=production)
+npm run db:deploy    # prisma migrate deploy: solo aplica las pendientes (es lo que se usa al desplegar)
+npm run db:seed      # prisma db seed: carga los datos de prueba (se niega con NODE_ENV=production)
 ```
 
 ## Cómo correr
@@ -64,6 +69,7 @@ npm run db:seed      # prisma db seed: carga los datos de prueba
 | `npm run test:api` | Pruebas de API con Playwright contra el servidor real (ver abajo). Las que **crean datos** (registro) usan `npm run test:api:test`, solo con la base de pruebas. |
 | `npm run build` | `prisma generate` + compilación de TypeScript a `dist/`. |
 | `npm start` | Corre la versión compilada (`dist/server.js`). |
+| `docker compose up --build` | API + PostgreSQL local en Docker, con migraciones y datos de prueba (ver "Despliegue"). |
 
 Para comprobar que está arriba: `GET http://localhost:3000/api/health` → `{ "status": "ok" }`.
 
@@ -265,7 +271,7 @@ frontend/src/
 └── presentation/    React: rutas protegidas, tema claro/oscuro, layout, componentes y una carpeta por pantalla (features/).
 ```
 
-**Pantallas hechas:** login, Panel (`GET /api/movements/summary`) y Movimientos (lista paginada con filtros, crear, editar y eliminar) y Cuentas (tarjetas con saldo, crear, editar y eliminar). Metas, Categorías, Registro, Encuesta y Mi perfil siguen pendientes.
+**Pantallas hechas:** login, registro, Panel (`GET /api/movements/summary`), Movimientos (lista paginada con filtros), Cuentas, Categorías y Metas, las cuatro con crear, editar y eliminar. La encuesta financiera y Mi perfil quedan fuera de alcance por ahora (ver `docs/generated/plan-skills.md`).
 
 **Montos:** el usuario puede escribir `85000`, `85000,50` o `85000.50`. Un punto seguido de exactamente 3 dígitos (`85.000`) se rechaza con un mensaje en lugar de adivinar si son miles o decimales. COP se muestra sin decimales (diseño aprobado), así que se redondea solo al mostrar.
 
@@ -280,7 +286,7 @@ npm run dev                      # http://localhost:5173
 
 | Variable | Para qué |
 |---|---|
-| `VITE_API_URL` | URL base de la API (por defecto `http://localhost:3000`). Vite expone al navegador todo lo que empiece por `VITE_`: **nunca pongas secretos ahí**. |
+| `VITE_API_URL` | URL base de la API (por defecto `http://localhost:3000` en desarrollo). Vite expone al navegador todo lo que empiece por `VITE_`: **nunca pongas secretos ahí**. En el build de producción es **obligatoria**, `https` y no local (ver "Despliegue"). |
 
 ### Backend y front juntos
 
@@ -294,24 +300,25 @@ npm run dev
 npm run dev
 ```
 
-La API acepta cualquier origen (CORS abierto) y expone las cabeceras `X-Total-Count`, `X-Page` y `X-Limit`, así que no hace falta proxy. Entra con el usuario del seed (ver "Usuario de prueba").
+La API solo acepta los orígenes de `CORS_ORIGINS` (por defecto `http://localhost:5173` y `http://127.0.0.1:5173`, el servidor de Vite) y expone las cabeceras `X-Total-Count`, `X-Page`, `X-Limit` y `Retry-After`, así que no hace falta proxy. Entra con el usuario del seed (ver "Usuario de prueba").
 
 ### Comandos del front
 
 | Comando (en `frontend/`) | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo con recarga (HMR). |
-| `npm run build` | Chequeo de tipos (`tsc`) y build de producción en `frontend/dist/`. |
+| `npm run build` | Chequeo de tipos (`tsc`) y build de producción en `frontend/dist/`. Falla si `VITE_API_URL` falta, no es https o es local (para probarlo en tu equipo, ver "Despliegue"). |
 | `npm run preview` | Sirve el build en `http://localhost:4173`. |
 | `npm run typecheck` / `npm run lint` | Tipos y ESLint. |
 | `npm test` | Pruebas con Vitest y Testing Library (no necesitan backend ni base de datos). |
 | `npm run e2e` | Pruebas de punta a punta con Playwright (ver abajo; **solo contra la base de pruebas**). |
+| `npm run mock:api`, `npm run visual:capture`, `npm run visual:axe` | API simulada, capturas de todas las pantallas y revisión con axe (ver `frontend/scripts/README.md`). |
 
 ### Sesión y seguridad
 
 - El token JWT se guarda en `sessionStorage` (sobrevive a recargas, se borra al cerrar la pestaña). Cualquier respuesta 401 cierra la sesión y lleva al login. Al cerrar sesión se vacía la caché de datos.
 - `index.html` lleva una Content-Security-Policy (`<meta>`) que prohíbe scripts en línea y `eval`; solo permite la API de `VITE_API_URL` y Google Fonts. En desarrollo se relaja lo mínimo que Vite necesita (HMR). El script del tema es un archivo externo y síncrono (`public/theme-init.js`) para aplicar el tema antes de pintar sin necesitar `unsafe-inline`.
-- Una `<meta>` no puede fijar `frame-ancestors` ni las cabeceras de seguridad: al desplegar, configúralas en el servidor. El servidor también debe devolver `index.html` para cualquier ruta (el front usa rutas sin `#`).
+- Una `<meta>` no puede fijar `frame-ancestors` ni las cabeceras de seguridad: `frontend/vercel.json` las fija en Vercel, y también la reescritura a `index.html` para cualquier ruta (el front usa rutas sin `#`). Si se despliega en otro servidor, hay que reproducir ambas cosas.
 - El tema (claro, oscuro, sistema) se guarda en `localStorage` con la clave `crezia-theme`.
 
 ### Pruebas E2E del front (base de datos de pruebas)
@@ -335,6 +342,110 @@ npm run e2e
 ```
 
 Sin `E2E_TEST_DB_CONFIRMED=true`, sin credenciales o sin backend respondiendo, las pruebas se saltan con un aviso. Si falta alguna variable en `.env.test`, Node usaría el valor del `.env` real: por eso se piden las cuatro.
+
+## Despliegue (Railway + Vercel + Supabase)
+
+Esta sección **prepara** el despliegue; no hay nada desplegado todavía. La lista de verificación previa y la prueba del flujo principal están en [`docs/despliegue.md`](docs/despliegue.md).
+
+| Pieza | Dónde | Cómo |
+|---|---|---|
+| API | Railway | Se construye con el `Dockerfile` de la raíz. |
+| Front | Vercel | Carpeta `frontend/`, build de Vite. |
+| Base de datos | Supabase | Ya existe; las migraciones se aplican con `npm run db:deploy`. |
+
+> Los nombres de los ajustes de los paneles de Railway y Vercel que aparecen abajo salen de lo que se conoce de esas plataformas **y no se han comprobado en este repositorio**: donde dice *Comprueba en el panel*, confirma que el ajuste existe con ese nombre antes de fiarte.
+
+### Variables de entorno de la API
+
+El servidor, cuando corre con `NODE_ENV=production`, **se niega a arrancar** si hay un `TEST_MODE`, un `PERF_MODE`, un `JWT_SECRET` corto o de ejemplo, si falta `DATABASE_URL` o `CORS_ORIGINS`, si `CORS_ORIGINS` contiene localhost o si están definidos los límites del registro (`src/config/productionGuard.ts`). El detalle de cada variable está en `.env.example`.
+
+| Variable | Railway (producción) | Valor / nota |
+|---|---|---|
+| `DATABASE_URL` | **Sí** | Pooler de transacciones de Supabase: puerto `6543` y `?pgbouncer=true`. |
+| `DIRECT_URL` | **Sí** | Pooler de sesión de Supabase, puerto `5432`. No la usa el servidor en ejecución, pero **sí** `prisma migrate deploy` (el comando previo al despliegue) y `prisma generate`. |
+| `JWT_SECRET` | **Sí** | Al menos 32 caracteres aleatorios, distinto del de desarrollo. Se guarda solo en Railway. |
+| `JWT_EXPIRES_IN` | Opcional | Por defecto `1d`. |
+| `NODE_ENV` | **Sí** (`production`) | El `Dockerfile` ya lo fija; no lo cambies. Es lo que activa la guarda de producción. |
+| `CORS_ORIGINS` | **Sí** | La URL de Vercel del front, sin barra final: `https://tu-proyecto.vercel.app`. Varias, separadas por comas. Sin comodines ni localhost. |
+| `TRUST_PROXY` | **Sí** | Número de proxies delante de la API. Suele ser `1` en Railway, **pero compruébalo** (ver abajo). Nunca `true`. |
+| `PORT` | **No la definas** | Railway la inyecta. La API la lee del entorno (3000 si no existe). *Comprueba en el panel* que aparece entre las variables del servicio. |
+| `DB_POOL_MAX`, `DB_POOL_CONNECTION_TIMEOUT_MS` | Opcional | Ajuste fino del pool de conexiones. Supabase limita las conexiones del pooler: no subas `DB_POOL_MAX` sin revisar el plan. |
+| `UV_THREADPOOL_SIZE` | Opcional | Hilos de bcrypt. Si no se define, la API usa el número de CPU que ve el contenedor (entre 4 y 32), que en un contenedor puede ser el del servidor completo, no el de tu plan. |
+
+**Variables que NO deben existir en producción:**
+
+| Variable | Por qué |
+|---|---|
+| `TEST_MODE` | Activa las protecciones de la base de pruebas. La API lo rechaza en producción. |
+| `PERF_MODE` y todas las `PERF_*` | Solo para pruebas de carga locales. |
+| `REGISTER_RATE_LIMIT_MAX`, `REGISTER_RATE_LIMIT_WINDOW_MS` | Subir el límite del registro (`.env.test` usa 1000) quita la protección contra registros masivos. En producción valen los de por defecto: 10 intentos cada 15 minutos por IP. |
+| `E2E_*` | Credenciales de las pruebas E2E. |
+| Un `JWT_SECRET` de ejemplo | `change-me…`, `test-only-secret…`, etc. |
+| Cualquier URL de la base de **pruebas** o de la local de Docker | Producción solo habla con el proyecto de Supabase real. |
+
+### Imagen Docker (API)
+
+El `Dockerfile` tiene varias etapas: compila TypeScript, instala solo las dependencias de producción y deja una imagen final con el código compilado, `node_modules`, `prisma/` (migraciones) y nada más. Corre como el usuario `node` (no root), no copia ningún `.env` (`.dockerignore`) y no lleva secretos: la configuración entra como variables de entorno al arrancar. Incluye un `HEALTHCHECK` de Docker contra `GET /api/health`.
+
+```powershell
+docker build --target runtime -t crezia-api .
+```
+
+La etapa `tools` existe solo para `docker-compose` (el seed necesita `tsx`) y **no** es la imagen de producción. Railway usa la última etapa del archivo (`runtime`); *comprueba en el panel* (Settings → Build) que detecta el `Dockerfile` de la raíz.
+
+### Migraciones en cada despliegue
+
+Solo se aplica `prisma migrate deploy` (`npm run db:deploy`), que ejecuta las migraciones pendientes de `prisma/migrations` y nada más: no crea migraciones ni borra datos.
+
+- **Recomendado:** configurarlo como comando previo al despliegue de Railway (*Comprueba en el panel*: Settings → Deploy → "Pre-deploy Command"): `npm run db:deploy`. Si la migración falla, el despliegue no continúa y la versión anterior sigue sirviendo. Necesita `DIRECT_URL` entre las variables del servicio.
+- Si ese ajuste no existe en tu plan, la alternativa es aplicar las migraciones a mano desde tu equipo **antes** de desplegar (con la `DIRECT_URL` de producción en tu sesión, nunca en un archivo) y hacer copia de seguridad antes (ver `docs/despliegue.md`).
+- **`migrate dev` y `reset` no se usan en producción:** el `Dockerfile` solo arranca `node dist/server.js`, y los scripts `db:migrate` (`migrate dev`) y `db:seed` se niegan a correr con `NODE_ENV=production`. Esa protección cubre el contenedor; **no** impide que alguien ejecute `prisma migrate reset` desde su equipo con la URL de producción. Esa regla sigue siendo tuya (ver `CLAUDE.md`).
+- **El seed no se ejecuta en producción:** crea el usuario `test@crezia.com` con una contraseña conocida. Las monedas (COP, USD) y las categorías del sistema deben existir en la base; ver `docs/despliegue.md`.
+
+### Proxy y límite de intentos (`TRUST_PROXY`)
+
+El límite del registro cuenta por IP. Detrás de Railway la API ve primero la IP del proxy de la plataforma; `TRUST_PROXY` le dice cuántos proxies confiar para leer la IP real del cliente (`X-Forwarded-For`).
+
+- **Valor:** en plataformas con un solo proxy de borde suele ser `1`. **No lo asumas para Railway**: confírmalo con la prueba de abajo.
+- **Si es demasiado bajo (0 / vacío):** todos los usuarios comparten la IP del proxy y el límite de 10 intentos es de todos a la vez. En los logs aparece un aviso de `express-rate-limit` (`ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`).
+- **Si es demasiado alto:** un cliente puede inventar su `X-Forwarded-For` y saltarse el límite.
+- **Cómo comprobarlo (ya desplegado):**
+  1. Revisa los logs del servicio tras la primera petición: no debe aparecer ningún aviso `ERR_ERL_*`.
+  2. Envía 11 `POST /api/auth/register` seguidos (con el cuerpo vacío basta; todos los intentos cuentan) cada uno con una cabecera `X-Forwarded-For` distinta e inventada. Con el valor correcto, el undécimo da **429**, porque la cabecera inventada se ignora. Si nunca llega el 429, el valor es demasiado alto.
+  3. Con tu IP bloqueada, prueba desde otra red (por ejemplo el celular con datos): debe poder intentar. Si también recibe 429, el valor es demasiado bajo.
+  Esta prueba gasta tu cupo de 15 minutos.
+
+### Chequeo de salud
+
+`GET /api/health` responde `200 {"status":"ok"}` sin token, sin tocar la base de datos y sin pasar por el límite del registro; sirve como chequeo de salud. Como no consulta la base, el servicio figura "sano" aunque la base esté caída. En Railway: *Comprueba en el panel* (Settings → Deploy → "Healthcheck Path") y escribe `/api/health`.
+
+### Front en Vercel
+
+| Ajuste de Vercel | Valor |
+|---|---|
+| Root Directory | `frontend` |
+| Framework Preset | Vite |
+| Build Command | `npm run build` (ejecuta `tsc` y `vite build`) |
+| Output Directory | `dist` |
+| Install Command | `npm install` (o `npm ci`) |
+| Environment Variable | `VITE_API_URL` = la URL pública **https** de la API en Railway, sin barra final |
+
+- `VITE_API_URL` se incorpora al *bundle* en el **build**: si la cambias, hay que volver a desplegar. El build de producción **falla** si falta, si no es `https` o si apunta a localhost (`frontend/src/build/csp.ts`), y esa misma URL es la única que la Content-Security-Policy deja contactar (`connect-src`). En producción la CSP no menciona localhost.
+- `frontend/vercel.json` define: (1) la reescritura a `index.html` para que `/panel`, `/movimientos`… funcionen al recargar (los archivos reales, como `/assets/…`, no se reescriben); (2) cabeceras de seguridad (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `frame-ancestors 'none'`, `Permissions-Policy`); (3) caché larga para `/assets/`. *Comprueba tras el primer despliegue* que recargar `/metas` no da 404 y que las cabeceras llegan (`curl -I https://tu-proyecto.vercel.app/`).
+- Para probar el build de producción en tu equipo contra una API local: `$env:VITE_ALLOW_LOCAL_API = "true"; $env:VITE_API_URL = "http://localhost:3000"; npm run build; npm run preview`. Nunca definas `VITE_ALLOW_LOCAL_API` en Vercel.
+- Cada vez que cambie el dominio del front, actualiza `CORS_ORIGINS` en Railway (las vistas previas de Vercel de cada rama tienen otra URL y la API las rechazará, a propósito).
+
+### Todo en local con Docker (`docker-compose.yml`)
+
+Para tener la API y una base PostgreSQL vacía en tu equipo, sin Supabase:
+
+```powershell
+docker compose up --build        # API en http://localhost:3000 (PostgreSQL en 127.0.0.1:5433)
+docker compose down              # detener (conserva los datos)
+docker compose down -v           # detener y BORRAR la base local
+```
+
+Aplica las migraciones, carga las monedas, las categorías y el usuario `test@crezia.com` (ver "Usuario de prueba") y arranca la API. Es seguro respecto a Supabase: todos los valores están escritos en el archivo (no lee tu `.env`, ni siquiera con `${...}`), la única base es el servicio `db`, y el puerto de la base solo se publica en `127.0.0.1`. Las contraseñas de ese archivo son de desarrollo; no las reutilices. El front local (`npm run dev` en `frontend/`, puerto 5173) puede usarla tal cual.
 
 ## Probar en Postman
 

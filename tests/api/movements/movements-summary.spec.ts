@@ -37,10 +37,15 @@ test.describe('Movements API - GET /api/movements/summary', () => {
     if (categoryId) expect((await deleteCategory(apiRequest, authToken, categoryId)).status()).toBe(200)
   })
 
-  /** Crea un movimiento y guarda su id para borrarlo al terminar */
+  /**
+   * Crea un movimiento y guarda su id para borrarlo al terminar.
+   * Sin cuenta, la API exige currencyCode: por defecto COP (los casos de otra moneda lo pasan en overrides).
+   * Si la creación falla, el mensaje muestra el cuerpo de la respuesta.
+   */
   async function add(request: Parameters<typeof createMovement>[0], token: string, overrides: object) {
-    const response = await createMovement(request, token, movementPayload({ categoryId, ...overrides }))
-    expect(response.status(), 'Setup: create movement').toBe(201)
+    const response = await createMovement(request, token, movementPayload({ categoryId, currencyCode: 'COP', ...overrides }))
+    const status = response.status()
+    expect(status, `Setup: create movement (HTTP ${status}) ${status === 201 ? '' : await response.text()}`).toBe(201)
     const { id } = await response.json()
     createdIds.push(id)
     return id as string

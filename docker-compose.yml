@@ -1,0 +1,92 @@
+# Crezia: LOCAL development stack (API + PostgreSQL). One command:
+#
+#   docker compose up --build
+#
+# It starts an empty PostgreSQL, applies the migrations (prisma migrate deploy), loads the catalogs and the demo
+# user (prisma/seed.ts) and then starts the API on http://localhost:3000.
+#
+# SAFETY: this file never reaches Supabase.
+#  - Every value below is written literally; nothing is read from your .env (not even through ${...}), so the
+#    DATABASE_URL / DIRECT_URL of your real .env cannot leak into these containers.
+#  - There is no "env_file". The only database is the "db" service, reachable inside Docker as host "db".
+#  - The database port is published on 127.0.0.1 only (not on your network).
+# The passwords here are throw-away development values. Do not reuse them anywhere else.
+#
+# Stop: docker compose down      Stop and DELETE the local database: docker compose down -v
+
+name: crezia-local
+
+x-local-db: &local-db
+  DATABASE_URL: postgresql://crezia:crezia_local_only@db:5432/crezia_dev
+  DIRECT_URL: postgresql://crezia:crezia_local_only@db:5432/crezia_dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: crezia
+      POSTGRES_PASSWORD: crezia_local_only
+      POSTGRES_DB: crezia_dev
+    volumes:
+      - crezia-pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"   # 5433 so it does not collide with a PostgreSQL installed on your machine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crezia -d crezia_dev"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # One-shot: applies the migrations of prisma/migrations (never "migrate dev" or "reset").
+  migrate:
+    build:
+      context: .
+      target: runtime
+    command: ["npm", "run", "db:deploy"]
+    environment:
+      <<: *local-db
+      NODE_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # One-shot: currencies (COP, USD), system categories and the demo user test@crezia.com (see README).
+  # Only for this local database: never run the seed against production.
+  seed:
+    build:
+      context: .
+      target: tools
+    command: ["npx", "tsx", "prisma/seed.ts"]
+    environment:
+      <<: *local-db
+      NODE_ENV: development
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      target: runtime
+    environment:
+      <<: *local-db
+      # "development" on purpose: the production guard (src/config/productionGuard.ts) would refuse this
+      # throw-away JWT secret and the localhost CORS origins.
+      NODE_ENV: development
+      PORT: "3000"
+      JWT_SECRET: local-development-only-jwt-secret-do-not-use-elsewhere
+      JWT_EXPIRES_IN: 1d
+      # The local front end (npm run dev in frontend/ serves on 5173).
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      TRUST_PROXY: ""
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  crezia-pgdata:

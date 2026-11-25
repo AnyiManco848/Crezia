@@ -6,3 +6,6 @@ dist/
 playwright-report/
 test-results/
 *.local
+
+# Reports of the visual/axe scripts (scripts/README.md)
+scripts/out/
