@@ -11,7 +11,7 @@
 ## 1. Resumen en 5 líneas
 
 1. **Backend casi completo para el alcance de "movimientos":** login, registro, categorías, cuentas, movimientos, resumen y metas existen. Faltan perfil de usuario (`/users/me`) y encuesta financiera.
-2. **Front avanzado, con 3 de 5 pantallas de menú reales** (Panel, Movimientos, Cuentas). **Metas y Categorías** siguen como "Esta sección aún no está disponible". El registro **no está bloqueado**: el backend ya lo tiene, pero el front sigue mostrando "todavía no está disponible". Mi perfil y la encuesta no existen.
+2. **Front con las 5 pantallas de menú reales** (Panel, Movimientos, Cuentas, Metas y Categorías) y el registro conectado al backend (`POST /api/auth/register`). Mi perfil y la encuesta no existen.
 3. **Lo que más bloquea el cierre:** las pruebas de API, la colección de Postman y los E2E están escritos pero **nunca se ejecutaron**, porque falta la base de pruebas (no existe `.env.test`). Hoy no hay evidencia de que backend y front funcionen juntos.
 4. **El repo está desordenado:** `develop` está 7 commits detrás de `master`, el trabajo del registro del backend quedó dentro de un commit de la rama `frontend`, y esa rama (4 commits) no está fusionada en `master`.
 5. **Seguridad y despliegue sin resolver:** sin límite de intentos en el login, `D-4` a medias, RLS sin revisar, sin cabeceras de seguridad en el servidor, sin CI ni archivos de despliegue. Documentación: faltan casi todas las salidas de las skills restantes.
@@ -24,7 +24,7 @@
 |---|---|---|
 | **Git** | Parcial | `git branch -a -vv`: `frontend` tiene 4 commits que no están en `origin/master` (`rev-list`: 0 y 4). `develop` va 7 commits detrás de `master`. `master` local está 24 commits detrás de `origin/master`. `git status` limpio al inicio. |
 | **Backend** | Parcial (la mayor parte hecha) | `src/presentation/routes/*.ts` (secciones 3 y 4) |
-| **Front** | Parcial | `frontend/src/presentation/app/routes.tsx`: `/metas` y `/categorias` usan `PendingPage`; `/registro` usa `RegisterPendingPage`. |
+| **Front** | Parcial | `frontend/src/presentation/app/routes.tsx`: `/panel`, `/movimientos`, `/cuentas`, `/metas`, `/categorias` y `/registro` usan sus páginas reales. Faltan Mi perfil y la encuesta, bloqueadas por el backend. |
 | **Pruebas** | Parcial: escritas, casi nada ejecutado | Hay archivos de prueba para todo, pero no existe `.env.test` (`ls -a`) y `docs/generated/test-database.md` es solo una guía. |
 | **Seguridad** | Parcial | Registro con límite de intentos hecho (`src/presentation/middlewares/rateLimit.ts`). Faltan los pendientes de la sección 6. |
 | **Documentación** | Parcial | Existen README, guía, specs, diseño, auditoría y plan. Faltan `main.md`, casos de uso, arquitectura, seguridad, blueprint, backlog y presentación (`git ls-files docs`). |
@@ -66,12 +66,12 @@
 | Pantalla | Estado | Evidencia / nota |
 |---|---|---|
 | Login | Completa | `features/login/LoginPage.tsx` |
-| Registro | **Pendiente (no bloqueada)** | `RegisterPendingPage.tsx` dice que el backend no tiene registro. Eso **ya no es cierto**: `POST /api/auth/register` existe. El comentario del archivo está desactualizado. |
+| Registro | Completa | `features/register/RegisterPage.tsx`, conectado a `POST /api/auth/register` |
 | Panel | Completa | `features/dashboard/`, conectado al resumen |
 | Movimientos | Completa | `features/movements/` (tabla, filtros, crear, editar, borrar) |
 | Cuentas | Completa | `features/accounts/` (tarjetas, crear, editar, borrar) |
-| Categorías | Pendiente | `routes.tsx`: `PendingPage`. El backend ya lo permite. |
-| Metas | Pendiente | `routes.tsx`: `PendingPage`. El backend ya lo permite. |
+| Categorías | Completa | `features/categories/` (lista, crear, editar, borrar) |
+| Metas | Completa | `features/goals/` (lista con progreso, crear, editar, borrar) |
 | Encuesta | Pendiente, **bloqueada por el backend** | No hay rutas de `FinancialProfile` |
 | Mi perfil | Pendiente, **bloqueada por el backend** | El menú de usuario solo tiene "Cerrar sesión" (según `plan-skills.md`; no abrí `UserMenu.tsx` línea por línea) |
 | Menú de usuario | Parcial | Existe `layout/UserMenu.tsx`, sin "Mi perfil" |

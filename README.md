@@ -261,7 +261,7 @@ npx playwright show-report               # reporte HTML del último run
 
 ## Frontend (React + Vite + TypeScript)
 
-Vive en `frontend/` con su propio `package.json`. Necesita Node 20 o superior y el backend corriendo. Las pantallas que aún no existen muestran "Esta sección aún no está disponible" (ver `docs/generated/plan-skills.md`).
+Vive en `frontend/` con su propio `package.json`. Necesita Node 20 o superior y el backend corriendo. Tiene las pantallas de Panel, Movimientos, Cuentas, Metas y Categorías, además del inicio de sesión y el registro.
 
 ```
 frontend/src/
