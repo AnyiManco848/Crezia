@@ -1,0 +1,138 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+
+# Least privilege: the jobs only read the repository.
+permissions:
+  contents: read
+
+# A new run on the same branch or PR cancels the outdated one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Same major as the Dockerfile (ARG NODE_VERSION=22). package.json only requires ">=20".
+env:
+  NODE_VERSION: '22'
+  # FAKE values, only so that "prisma generate" (postinstall and "npm run build") and the unit tests can load their
+  # configuration. Nothing here connects to a database: unit tests use fakes. No real secret lives in this file.
+  DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+  DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+  JWT_SECRET: ci-fake-jwt-secret-for-unit-tests-only-0123456789abcdef
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Backend unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Frontend unit tests with coverage
+        run: npm run test:coverage
+        working-directory: frontend
+
+      - name: Upload backend coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-backend
+          path: coverage/lcov.info
+          if-no-files-found: error
+
+      - name: Upload frontend coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-frontend
+          path: frontend/coverage/lcov.info
+          if-no-files-found: error
+
+  build:
+    name: Build Check
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      # prisma generate + tsc
+      - name: Backend build
+        run: npm run build
+
+      - name: Frontend lint
+        run: npm run lint
+        working-directory: frontend
+
+      # tsc --noEmit + vite build. A production build requires an https API URL that is not localhost: this one is fake.
+      - name: Frontend build
+        run: npm run build
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://api.crezia.example.com
+
+  sonar:
+    name: Sonar Analysis
+    needs: build
+    runs-on: ubuntu-latest
+    # Pull requests from forks do not get repository secrets: the scan could not authenticate.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history: Sonar needs it for blame and new-code detection
+
+      - name: Download backend coverage
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-backend
+          path: coverage
+
+      - name: Download frontend coverage
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-frontend
+          path: frontend/coverage
+
+      # Vitest writes the paths of each package relative to that package (src/...). Sonar resolves them from the repository
+      # root, where src/ is the backend: the frontend report needs its folder as a prefix.
+      - name: Make frontend coverage paths relative to the repository root
+        run: sed -i 's#^SF:#SF:frontend/#' frontend/coverage/lcov.info
+
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
