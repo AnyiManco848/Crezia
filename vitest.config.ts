@@ -14,8 +14,6 @@ export default defineConfig({
         ...defaultExclude,
         "**/*.spec.ts",
         "**/node_modules/**",
-        // Already excluded before this review (tested guards, kept as is; see docs/testing/cobertura.md, section "Pendiente de decisión").
-        "src/config/**",
         // Generated code (Prisma client).
         "src/generated/**",
         // Entry point and composition root: wiring only, no logic.

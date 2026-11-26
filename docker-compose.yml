@@ -16,9 +16,6 @@
 
 name: crezia-local
 
-x-local-db: &local-db
-  DATABASE_URL: postgresql://crezia:crezia_local_only@db:5432/crezia_dev
-  DIRECT_URL: postgresql://crezia:crezia_local_only@db:5432/crezia_dev
 
 services:
   db:

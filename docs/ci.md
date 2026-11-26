@@ -32,3 +32,4 @@ Archivo: `.github/workflows/ci.yml` (nombre «CI/CD»). Se ejecuta en cada `push
 - Backend: `npm run test:coverage` (Vitest + `@vitest/coverage-v8`, ya existía). Salida en `coverage/`.
 - Front: `npm run test:coverage` (se añadió con `@vitest/coverage-v8` y el bloque `coverage` de `frontend/vite.config.ts`). Salida en `frontend/coverage/`. Ambas carpetas están en `.gitignore`.
 - `sonar-project.properties` excluye `src/generated`, `prisma/migrations`, `docs`, `frontend/e2e`, `tests/api` y los archivos de prueba.
+- Qué se excluye de la cobertura y por qué: ver [testing/cobertura.md](testing/cobertura.md). Las mismas exclusiones viven en `vitest.config.ts`, `frontend/vite.config.ts` y `sonar.coverage.exclusions`.

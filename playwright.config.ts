@@ -8,7 +8,7 @@ export default defineConfig({
   testMatch: '**/*.spec.ts',
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'https://crezia-production.up.railway.app',
     extraHTTPHeaders: { Accept: 'application/json' },
   },
   // In test mode (npm run test:api:test, TEST_MODE=true from .env.test) the backend is started on the TEST database
